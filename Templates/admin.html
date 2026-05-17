@@ -1,0 +1,994 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>PMS — Admin Panel</title>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600;700&family=Manrope:wght@400;600;700;800&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+<script src="https://s3.tradingview.com/tv.js"></script>
+<style>
+:root{
+  --bg:#050b14; --surface:#0b1523; --surface2:#0f1e30; --surface3:#13243a;
+  --border:#162234; --border2:#1e3048;
+  --accent:#00e5b0; --accent-dim:rgba(0,229,176,0.07); --accent-glow:rgba(0,229,176,0.2);
+  --blue:#2979ff; --orange:#ff6b2b; --purple:#9c27b0;
+  --up:#00e5b0; --down:#ff3d5a;
+  --text:#ddeeff; --muted:#4a6d8c; --muted2:#6b8fad;
+  --admin:#f59e0b;
+  --sidebar:230px;
+  --mono:'JetBrains Mono',monospace; --sans:'Manrope',sans-serif;
+}
+*{margin:0;padding:0;box-sizing:border-box;}
+body{font-family:var(--sans);background:var(--bg);color:var(--text);display:flex;height:100vh;overflow:hidden;}
+
+/* SIDEBAR */
+.sidebar{width:var(--sidebar);background:var(--surface);border-right:1px solid var(--border);display:flex;flex-direction:column;height:100vh;flex-shrink:0;position:relative;}
+.sidebar::after{content:'';position:absolute;top:0;left:0;right:0;height:2px;background:linear-gradient(90deg,var(--admin),var(--orange));}
+.brand{padding:20px;border-bottom:1px solid var(--border);}
+.brand-inner{display:flex;align-items:center;gap:10px;}
+.brand-ico{width:38px;height:38px;background:linear-gradient(135deg,var(--admin),var(--orange));border-radius:9px;display:flex;align-items:center;justify-content:center;font-family:var(--mono);font-weight:700;font-size:14px;color:#000;box-shadow:0 0 14px rgba(245,158,11,0.3);}
+.brand-name{font-size:16px;font-weight:800;letter-spacing:-0.5px;}
+.brand-sub{font-family:var(--mono);font-size:9px;color:var(--admin);letter-spacing:1px;}
+
+.nav{flex:1;padding:16px 12px;overflow-y:auto;}
+.nav-label{font-family:var(--mono);font-size:9px;text-transform:uppercase;letter-spacing:1.5px;color:var(--muted);padding:0 8px;margin-bottom:8px;margin-top:16px;}
+.nav-item{display:flex;align-items:center;gap:10px;padding:10px 12px;border-radius:8px;cursor:pointer;font-size:13px;font-weight:600;color:var(--muted2);transition:all 0.2s;margin-bottom:2px;}
+.nav-item:hover{background:var(--surface2);color:var(--text);}
+.nav-item.active{background:rgba(245,158,11,0.08);color:var(--admin);border:1px solid rgba(245,158,11,0.2);}
+.nav-ico{font-size:15px;width:18px;text-align:center;}
+
+.sidebar-footer{padding:16px 12px;border-top:1px solid var(--border);}
+.admin-badge{display:flex;align-items:center;gap:8px;padding:10px 12px;background:rgba(245,158,11,0.06);border:1px solid rgba(245,158,11,0.15);border-radius:8px;margin-bottom:10px;}
+.admin-dot{width:8px;height:8px;border-radius:50%;background:var(--admin);animation:pulse 1.5s ease-in-out infinite;}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:0.5}}
+.admin-txt{font-family:var(--mono);font-size:11px;color:var(--admin);}
+.btn-logout{width:100%;padding:9px;background:rgba(255,61,90,0.1);border:1px solid rgba(255,61,90,0.2);border-radius:8px;color:#ff3d5a;font-size:12px;font-weight:700;font-family:var(--sans);cursor:pointer;transition:all 0.3s;}
+.btn-logout:hover{background:rgba(255,61,90,0.2);}
+
+/* MAIN */
+.main{flex:1;display:flex;flex-direction:column;overflow:hidden;}
+
+/* TOPBAR */
+.topbar{height:54px;background:var(--surface);border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;padding:0 24px;flex-shrink:0;}
+.page-title{font-size:16px;font-weight:800;letter-spacing:-0.3px;}
+.page-sub{font-family:var(--mono);font-size:11px;color:var(--muted);}
+.topbar-right{display:flex;align-items:center;gap:14px;}
+.market-badge{display:flex;align-items:center;gap:6px;font-family:var(--mono);font-size:11px;padding:5px 10px;border-radius:20px;border:1px solid rgba(0,229,176,0.2);background:var(--accent-dim);color:var(--accent);}
+.refresh-btn{padding:6px 12px;background:var(--surface2);border:1px solid var(--border2);border-radius:7px;color:var(--muted2);font-size:11px;font-family:var(--mono);cursor:pointer;transition:all 0.2s;}
+.refresh-btn:hover{color:var(--text);border-color:var(--muted);}
+
+/* CONTENT */
+.content{flex:1;overflow-y:auto;padding:20px 24px;}
+.content::-webkit-scrollbar{width:4px;}
+.content::-webkit-scrollbar-thumb{background:var(--border2);border-radius:4px;}
+
+.section{display:none;}
+.section.active{display:block;}
+
+/* STAT CARDS */
+.stat-cards{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:20px;}
+.stat-card{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:18px;position:relative;overflow:hidden;}
+.stat-card::before{content:'';position:absolute;top:0;left:0;right:0;height:2px;}
+.stat-card.c1::before{background:var(--blue);}
+.stat-card.c2::before{background:var(--accent);}
+.stat-card.c3::before{background:var(--orange);}
+.stat-card.c4::before{background:var(--purple);}
+.sc-label{font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:1px;font-family:var(--mono);margin-bottom:8px;}
+.sc-val{font-size:22px;font-weight:800;font-family:var(--mono);letter-spacing:-1px;}
+.sc-sub{font-size:11px;color:var(--muted2);margin-top:5px;font-family:var(--mono);}
+.sc-ico{position:absolute;right:14px;top:14px;font-size:20px;opacity:0.35;}
+
+/* TABLE */
+.table-wrap{background:var(--surface);border:1px solid var(--border);border-radius:12px;overflow:hidden;margin-bottom:22px;}
+.table-head{display:flex;align-items:center;justify-content:space-between;padding:14px 18px;border-bottom:1px solid var(--border);}
+.table-title{font-size:14px;font-weight:700;}
+
+table{width:100%;border-collapse:collapse;}
+thead tr{background:var(--surface2);}
+th{padding:10px 14px;text-align:left;font-family:var(--mono);font-size:10px;text-transform:uppercase;letter-spacing:1px;color:var(--muted);font-weight:600;white-space:nowrap;}
+td{padding:12px 14px;font-size:13px;border-bottom:1px solid rgba(22,34,52,0.7);font-family:var(--mono);}
+tr:last-child td{border-bottom:none;}
+tbody tr{transition:background 0.15s;}
+tbody tr:hover{background:var(--surface2);}
+.sym-cell{font-weight:700;color:var(--text);}
+.up-val{color:var(--up);font-weight:700;}
+.dn-val{color:var(--down);font-weight:700;}
+.neutral{color:var(--muted2);}
+
+/* Rank badges */
+.rank-gold{background:linear-gradient(135deg,#f59e0b,#d97706);color:#000;font-weight:800;font-size:11px;padding:3px 8px;border-radius:12px;font-family:var(--sans);}
+.rank-silver{background:linear-gradient(135deg,#94a3b8,#64748b);color:#000;font-weight:800;font-size:11px;padding:3px 8px;border-radius:12px;font-family:var(--sans);}
+.rank-bronze{background:linear-gradient(135deg,#cd7f32,#a0522d);color:#fff;font-weight:800;font-size:11px;padding:3px 8px;border-radius:12px;font-family:var(--sans);}
+
+.roi-pos{color:var(--up);font-weight:700;}
+.roi-neg{color:var(--down);font-weight:700;}
+
+/* View button */
+.btn-view{padding:6px 14px;background:rgba(41,121,255,0.1);border:1px solid rgba(41,121,255,0.25);border-radius:6px;color:var(--blue);font-size:11px;font-weight:700;font-family:var(--mono);cursor:pointer;transition:all 0.2s;}
+.btn-view:hover{background:rgba(41,121,255,0.2);}
+
+/* Type badge */
+.type-buy{display:inline-flex;padding:3px 8px;background:rgba(0,229,176,0.1);border-radius:4px;color:var(--up);font-size:10px;font-weight:700;}
+.type-sell{display:inline-flex;padding:3px 8px;background:rgba(255,61,90,0.1);border-radius:4px;color:var(--down);font-size:10px;font-weight:700;}
+
+/* USER DETAIL PANEL */
+.user-detail-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;}
+.user-detail-info{display:flex;align-items:center;gap:14px;}
+.udh-avatar{width:48px;height:48px;border-radius:50%;background:linear-gradient(135deg,var(--accent),var(--blue));display:flex;align-items:center;justify-content:center;font-size:18px;font-weight:800;color:#000;}
+.udh-name{font-size:18px;font-weight:800;letter-spacing:-0.3px;}
+.udh-id{font-family:var(--mono);font-size:11px;color:var(--muted);}
+.btn-back{display:flex;align-items:center;gap:6px;padding:8px 14px;background:var(--surface2);border:1px solid var(--border2);border-radius:8px;color:var(--muted2);font-size:12px;font-family:var(--mono);cursor:pointer;transition:all 0.2s;}
+.btn-back:hover{color:var(--text);border-color:var(--muted);}
+
+/* Cards inline */
+.cards-row{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin-bottom:20px;}
+.card{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:18px;position:relative;overflow:hidden;}
+.card::before{content:'';position:absolute;top:0;left:0;right:0;height:2px;}
+.card.inv::before{background:var(--blue);}
+.card.cur::before{background:var(--accent);}
+.card.pl::before{background:var(--orange);}
+.card-label{font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:1px;font-family:var(--mono);margin-bottom:8px;}
+.card-val{font-size:22px;font-weight:800;font-family:var(--mono);letter-spacing:-1px;}
+
+/* Chart box */
+.chart-box{background:var(--surface);border:1px solid var(--border);border-radius:12px;overflow:hidden;margin-bottom:20px;}
+.chart-box-head{display:flex;align-items:center;justify-content:space-between;padding:14px 18px;border-bottom:1px solid var(--border);}
+.chart-box-body{padding:4px;}
+
+/* Empty */
+.empty{text-align:center;padding:40px;color:var(--muted);}
+.empty-ico{font-size:32px;margin-bottom:10px;opacity:0.4;}
+.empty p{font-size:12px;font-family:var(--mono);}
+
+/* Loading */
+.dots{display:inline-flex;gap:4px;align-items:center;}
+.dot{width:6px;height:6px;background:var(--accent);border-radius:50%;animation:dotB 1s ease-in-out infinite;}
+.dot:nth-child(2){animation-delay:0.15s}.dot:nth-child(3){animation-delay:0.3s}
+@keyframes dotB{0%,80%,100%{transform:scale(0.7);opacity:0.5}40%{transform:scale(1);opacity:1}}
+
+/* SweetAlert */
+.swal2-popup{background:var(--surface)!important;border:1px solid var(--border2)!important;color:var(--text)!important;font-family:var(--sans)!important;border-radius:14px!important;}
+.swal2-title{color:var(--text)!important;}
+.swal2-html-container{color:var(--muted2)!important;font-family:var(--mono)!important;font-size:13px!important;}
+.swal2-confirm{background:var(--accent)!important;color:#000!important;font-weight:700!important;border-radius:8px!important;}
+.swal2-cancel{background:var(--surface2)!important;border:1px solid var(--border2)!important;color:var(--text)!important;border-radius:8px!important;}
+
+/* MESSAGING SYSTEM STYLES */
+.messages-container{max-width:800px;margin:0 auto;}
+.messages-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:24px;padding-bottom:16px;border-bottom:1px solid var(--border);}
+.messages-title{font-size:20px;font-weight:800;letter-spacing:-0.5px;color:var(--text);}
+.messages-user-info{text-align:right;}
+.msg-user-id{font-family:var(--mono);font-size:11px;color:var(--muted);}
+
+.messages-form{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:24px;margin-bottom:24px;}
+.form-group{margin-bottom:20px;}
+.form-group:last-child{margin-bottom:0;}
+.form-group label{display:block;font-size:12px;font-weight:600;color:var(--text);margin-bottom:8px;text-transform:uppercase;letter-spacing:0.5px;}
+.msg-select{width:100%;padding:12px;background:var(--bg);border:1px solid var(--border2);border-radius:8px;color:var(--text);font-size:14px;font-family:var(--sans);cursor:pointer;transition:all 0.2s;}
+.msg-select:focus{outline:none;border-color:var(--accent);box-shadow:0 0 0 3px rgba(0,229,176,0.1);}
+.msg-user-display{padding:12px;background:var(--bg);border:1px solid var(--border2);border-radius:8px;color:var(--text);font-size:14px;font-family:var(--sans);}
+.msg-user-name{font-weight:600;color:var(--accent);display:block;margin-bottom:4px;}
+.msg-user-email{font-size:12px;color:var(--muted);font-family:var(--mono);}
+.msg-textarea{width:100%;padding:12px;background:var(--bg);border:1px solid var(--border2);border-radius:8px;color:var(--text);font-size:14px;font-family:var(--sans);resize:vertical;transition:all 0.2s;}
+.msg-textarea:focus{outline:none;border-color:var(--accent);box-shadow:0 0 0 3px rgba(0,229,176,0.1);}
+.msg-char-count{text-align:right;font-size:11px;color:var(--muted);margin-top:4px;}
+
+.form-actions{display:flex;gap:12px;justify-content:flex-end;}
+.btn{padding:10px 20px;border:none;border-radius:8px;font-size:14px;font-weight:600;cursor:pointer;transition:all 0.2s;font-family:var(--sans);}
+.btn-cancel{background:var(--surface2);color:var(--text);border:1px solid var(--border2);}
+.btn-cancel:hover{background:var(--surface3);}
+.btn-send{background:linear-gradient(135deg,var(--accent),#00b894);color:#000;font-weight:700;display:flex;align-items:center;gap:8px;}
+.btn-send:hover{transform:translateY(-1px);box-shadow:0 4px 12px rgba(0,229,176,0.3);}
+.btn-ico{font-size:16px;}
+
+.messages-history{background:var(--surface);border:1px solid var(--border);border-radius:12px;overflow:hidden;}
+.history-header{display:flex;align-items:center;justify-content:space-between;padding:16px 20px;background:var(--surface2);border-bottom:1px solid var(--border);}
+.history-title{font-size:14px;font-weight:600;color:var(--text);}
+.btn-view-all{padding:6px 12px;background:rgba(41,121,255,0.1);border:1px solid rgba(41,121,255,0.25);border-radius:6px;color:var(--blue);font-size:11px;font-weight:600;cursor:pointer;transition:all 0.2s;}
+.btn-view-all:hover{background:rgba(41,121,255,0.2);}
+
+.messages-list{max-height:400px;overflow-y:auto;}
+.message-item{padding:16px 20px;border-bottom:1px solid var(--border);transition:background 0.2s;}
+.message-item:last-child{border-bottom:none;}
+.message-item:hover{background:var(--surface2);}
+.message-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;}
+.message-user{font-size:12px;font-weight:600;color:var(--accent);}
+.message-date{font-size:11px;color:var(--muted);font-family:var(--mono);}
+.message-content{font-size:14px;color:var(--text);line-height:1.5;}
+
+.empty-state{display:flex;flex-direction:column;align-items:center;justify-content:center;padding:40px 20px;text-align:center;}
+.empty-ico{font-size:32px;margin-bottom:12px;opacity:0.5;}
+.empty-state p{color:var(--muted);font-size:14px;}
+
+.loading-state{display:flex;justify-content:center;padding:20px;}
+.dots{display:flex;gap:4px;}
+.dot{width:8px;height:8px;border-radius:50%;background:var(--accent);animation:dotBounce 1.4s infinite ease-in-out both;}
+.dot:nth-child(1){animation-delay:-0.32s;}
+.dot:nth-child(2){animation-delay:-0.16s;}
+@keyframes dotBounce{0%,80%,100%{transform:scale(0);}40%{transform:scale(1);}}
+
+
+</style>
+</head>
+<body>
+
+<!-- SIDEBAR -->
+<div class="sidebar">
+  <div class="brand">
+    <div class="brand-inner">
+      <div class="brand-ico">A</div>
+      <div><div class="brand-name">PMS Admin</div><div class="brand-sub">// SUPER_USER</div></div>
+    </div>
+  </div>
+  <div class="nav">
+    <div class="nav-label">Overview</div>
+    <div class="nav-item active" id="nav-users" onclick="showSection('users')"><span class="nav-ico">👥</span>All Users</div>
+    <div class="nav-label">User View</div>
+    <div class="nav-item" id="nav-userdetail" onclick="showSection('userdetail')" style="display:none;"><span class="nav-ico">👤</span>User Detail</div>
+    <div class="nav-item" id="nav-portfolio" onclick="showSection('portfolio')" style="display:none;"><span class="nav-ico">💼</span>Portfolio</div>
+    <div class="nav-item" id="nav-watchlist" onclick="showSection('watchlist')" style="display:none;"><span class="nav-ico">👁</span>Watchlist</div>
+    <div class="nav-item" id="nav-history" onclick="showSection('history')" style="display:none;"><span class="nav-ico">📋</span>Tradebook</div>
+    <div class="nav-item" id="nav-messages" onclick="showSection('messages')" style="display:none;"><span class="nav-ico">📨</span>Send Message</div>
+  </div>
+  <div class="sidebar-footer">
+    <div class="admin-badge">
+      <div class="admin-dot"></div>
+      <div class="admin-txt">Admin Access</div>
+    </div>
+    <button class="btn-logout" onclick="logout()">⏻ Logout</button>
+  </div>
+</div>
+
+<!-- MAIN -->
+<div class="main">
+  <div class="topbar">
+    <div>
+      <div class="page-title" id="pageTitle">All Users</div>
+      <div class="page-sub" id="pageDate"></div>
+    </div>
+    <div class="topbar-right">
+      <div class="nifty-val" style="font-family:var(--mono);font-size:12px;color:var(--muted2);">
+        NIFTY <span style="color:var(--up)">22,419 &#9650;</span>
+      </div>
+      <button class="refresh-btn" onclick="loadUsers()">&#8635; Refresh</button>
+      <div class="market-badge"><div class="pulse" style="width:7px;height:7px;border-radius:50%;background:var(--accent);animation:pulse 1.5s infinite;"></div>Live</div>
+    </div>
+  </div>
+
+  <div class="content">
+
+    <!-- ═══ USERS SECTION ═══ -->
+    <div class="section active" id="secUsers">
+      <div class="stat-cards">
+        <div class="stat-card c1"><div class="sc-ico">👥</div><div class="sc-label">Total Users</div><div class="sc-val" id="statUsers">—</div><div class="sc-sub">Registered</div></div>
+        <div class="stat-card c2"><div class="sc-ico">💰</div><div class="sc-label">Total AUM</div><div class="sc-val" id="statAUM">—</div><div class="sc-sub">Assets under mgmt</div></div>
+        <div class="stat-card c3"><div class="sc-ico">📈</div><div class="sc-label">Avg ROI</div><div class="sc-val" id="statROI">—</div><div class="sc-sub">Portfolio return</div></div>
+        <div class="stat-card c4"><div class="sc-ico">🏆</div><div class="sc-label">Top Performer</div><div class="sc-val" id="statTop" style="font-size:14px">—</div><div class="sc-sub">Best ROI user</div></div>
+      </div>
+
+      <div class="table-wrap">
+        <div class="table-head">
+          <div class="table-title">Investor Leaderboard</div>
+          <div style="font-family:var(--mono);font-size:11px;color:var(--muted);">Sorted by ROI</div>
+        </div>
+        <table>
+          <thead><tr>
+            <th>Rank</th><th>User ID</th><th>Email</th>
+            <th>Investment</th><th>Current Value</th><th>P/L</th><th>ROI</th><th>Action</th>
+          </tr></thead>
+          <tbody id="usersTableBody">
+            <tr><td colspan="8"><div class="empty"><div class="dots" style="justify-content:center;"><div class="dot"></div><div class="dot"></div><div class="dot"></div></div></div></td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- ═══ USER DETAIL SECTION ═══ -->
+    <div class="section" id="secUserdetail">
+      <div class="user-detail-header">
+        <div class="user-detail-info">
+          <div class="udh-avatar" id="udhAvatar">U</div>
+          <div>
+            <div class="udh-name" id="udhName">Loading...</div>
+            <div class="udh-id" id="udhId">// USER_ID</div>
+          </div>
+        </div>
+        <button class="btn-back" onclick="showSection('users')">← Back to Users</button>
+      </div>
+      <div class="cards-row">
+        <div class="card inv"><div class="card-label">Total Investment</div><div class="card-val" id="udTotalInv">₹0</div></div>
+        <div class="card cur"><div class="card-label">Current Value</div><div class="card-val" id="udCurVal">₹0</div></div>
+        <div class="card pl"><div class="card-label">Profit / Loss</div><div class="card-val" id="udPL">₹0</div></div>
+      </div>
+      <div class="chart-box">
+        <div class="chart-box-head">
+          <div class="table-title">Live Market Chart</div>
+          <div style="font-family:var(--mono);font-size:11px;color:var(--muted);" id="udChartLabel">NSE:RELIANCE</div>
+        </div>
+        <div class="chart-box-body"><div id="udTVChart" style="height:360px;"></div></div>
+      </div>
+    </div>
+
+    <!-- ═══ PORTFOLIO SECTION ═══ -->
+    <div class="section" id="secPortfolio">
+      <div class="table-wrap">
+        <div class="table-head">
+          <div class="table-title" id="portTitle">Active Portfolio</div>
+          <button class="btn-back" onclick="showSection('userdetail')">← User Detail</button>
+        </div>
+        <table>
+          <thead><tr><th>Symbol</th><th>Qty</th><th>Buy Price</th><th>Current</th><th>Total</th><th>P/L</th><th>P/L %</th><th>Status</th></tr></thead>
+          <tbody id="portBody"><tr><td colspan="8"><div class="empty"><div class="empty-ico">💼</div><p>No portfolio data</p></div></td></tr></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- ═══ WATCHLIST SECTION ═══ -->
+    <div class="section" id="secWatchlist">
+      <div class="table-wrap">
+        <div class="table-head">
+          <div class="table-title" id="watchTitle">Watchlist</div>
+          <button class="btn-back" onclick="showSection('userdetail')">← User Detail</button>
+        </div>
+        <table>
+          <thead><tr><th>Symbol</th><th>Current Price</th></tr></thead>
+          <tbody id="watchBody"><tr><td colspan="2"><div class="empty"><div class="empty-ico">👁</div><p>Empty watchlist</p></div></td></tr></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- ═══ HISTORY SECTION ═══ -->
+    <div class="section" id="secHistory">
+      <div class="table-wrap">
+        <div class="table-head">
+          <div class="table-title" id="histTitle">Tradebook</div>
+          <button class="btn-back" onclick="showSection('userdetail')">← User Detail</button>
+        </div>
+        <table>
+          <thead><tr><th>Symbol</th><th>Type</th><th>Qty</th><th>Price</th><th>Total</th><th>P/L</th><th>Date</th></tr></thead>
+          <tbody id="histBody"><tr><td colspan="7"><div class="empty"><div class="empty-ico">📋</div><p>No transactions</p></div></td></tr></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- ????? MESSAGES SECTION ????? -->
+    <div class="section" id="secMessages">
+      <div class="messages-container">
+        <div class="messages-header">
+          <div class="messages-title">Send Message to User</div>
+          <div class="messages-user-info">
+            <span id="msgUserEmail">Select a user</span>
+            <span id="msgUserId" class="msg-user-id"></span>
+          </div>
+        </div>
+        
+        <div class="messages-form">
+          <div class="form-group">
+            <label for="msgRecipient">Recipient</label>
+            <div class="msg-user-display" id="msgRecipientDisplay">
+              <span class="msg-user-name">No user selected</span>
+              <span class="msg-user-email">Select a user from dashboard</span>
+            </div>
+          </div>
+          
+          <div class="form-group">
+            <label for="msgContent">Message</label>
+            <textarea id="msgContent" class="msg-textarea" placeholder="Type your message here..." rows="4"></textarea>
+            <div class="msg-char-count"><span id="msgCharCount">0</span> / 500 characters</div>
+          </div>
+          
+          <div class="form-actions">
+            <button class="btn btn-cancel" onclick="clearMessageForm()">Clear</button>
+            <button class="btn btn-send" onclick="sendMessage()">
+              <span class="btn-ico">📨</span> Send Message
+            </button>
+          </div>
+        </div>
+        
+        <div class="messages-history">
+          <div class="history-header">
+            <div class="history-title">Recent Messages</div>
+            <button class="btn btn-view-all" onclick="viewAllMessages()">View All</button>
+          </div>
+          <div class="messages-list" id="messagesList">
+            <div class="empty-state">
+              <div class="empty-ico">??</div>
+              <p>No messages sent yet</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+
+<script>
+const BASE_URL = "http://localhost:8080";
+const priceCache = {};
+const CACHE_TIME = 10000;
+let currentUserId = null;
+let currentUserEmail = null;
+
+// ══════════════════════════════════════════
+// INIT
+// ══════════════════════════════════════════
+window.onload = function(){
+  const token = localStorage.getItem("token");
+  if(!token){
+    Swal.fire({icon:'warning',title:'Access Denied',text:'Please login first.',timer:1500,showConfirmButton:false}).then(()=>{window.location.href="login.html";});
+    return;
+  }
+  document.getElementById("pageDate").textContent = new Date().toLocaleDateString('en-IN',{weekday:'long',year:'numeric',month:'long',day:'numeric'});
+  loadUsers();
+};
+
+// ══════════════════════════════════════════
+// SECTION
+// ══════════════════════════════════════════
+const secMap={users:'secUsers',userdetail:'secUserdetail',portfolio:'secPortfolio',watchlist:'secWatchlist',history:'secHistory',messages:'secMessages'};
+const titleMap={users:'All Users',userdetail:'User Dashboard',portfolio:'User Portfolio',watchlist:'User Watchlist',history:'Tradebook',messages:'Send Message'};
+
+function showSection(key){
+  document.querySelectorAll('.section').forEach(s=>s.classList.remove('active'));
+  document.querySelectorAll('.nav-item').forEach(n=>n.classList.remove('active'));
+  document.getElementById(secMap[key]).classList.add('active');
+  const navEl=document.getElementById('nav-'+key);
+  if(navEl) navEl.classList.add('active');
+  document.getElementById("pageTitle").textContent = titleMap[key]||key;
+}
+
+// ══════════════════════════════════════════
+// LIVE PRICE
+// ══════════════════════════════════════════
+async function getLivePrice(symbol){
+  symbol=symbol.toUpperCase().trim();
+  const now=Date.now();
+  if(priceCache[symbol]&&(now-priceCache[symbol].time<CACHE_TIME)) return priceCache[symbol].price;
+  try {
+    const res=await apiRequest(`/api/stock/price?symbol=${encodeURIComponent(symbol)}`);
+    if(!res||!res.ok) return 0;
+    const data=await res.json();
+    priceCache[symbol]={price:data.lastPrice||0,time:now};
+    return priceCache[symbol].price;
+  } catch(e){ return 0; }
+}
+
+// ══════════════════════════════════════════
+// LOAD USERS
+// ══════════════════════════════════════════
+async function loadUsers(){
+  const tbody=document.getElementById("usersTableBody");
+  tbody.innerHTML=`<tr><td colspan="8"><div class="empty"><div class="dots" style="justify-content:center;"><div class="dot"></div><div class="dot"></div><div class="dot"></div></div></div></td></tr>`;
+  try {
+    const res=await apiRequest("/admin/users");
+    if(!res||!res.ok){ tbody.innerHTML=`<tr><td colspan="8"><div class="empty"><div class="empty-ico">⚠️</div><p>Failed to load users</p></div></td></tr>`; return; }
+    const data=await res.json();
+
+    // Calculate live totals
+    let totalAUM=0;
+    for(let user of data){
+      let liveTotal=0;
+      const pr=await apiRequest(`/admin/user/${user.userId}/portfolio`);
+      const port=pr&&pr.ok?await pr.json():[];
+      for(let s of port){
+        const lp=await getLivePrice(s.symbol);
+        liveTotal+=lp*s.quantity;
+      }
+      user.liveTotal=liveTotal;
+      user.pl=liveTotal-user.totalInvestment;
+      user.roi=user.totalInvestment>0?(user.pl/user.totalInvestment)*100:0;
+      totalAUM+=user.totalInvestment;
+    }
+
+    // Sort by ROI
+    data.sort((a,b)=>b.roi-a.roi);
+
+    // Stats
+    const avgROI=data.length>0?(data.reduce((s,u)=>s+u.roi,0)/data.length):0;
+    document.getElementById("statUsers").textContent=data.length;
+    document.getElementById("statAUM").textContent="₹"+fmt(totalAUM);
+    document.getElementById("statROI").textContent=(avgROI>=0?'+':'')+avgROI.toFixed(1)+"%";
+    document.getElementById("statROI").style.color=avgROI>=0?'var(--up)':'var(--down)';
+    document.getElementById("statTop").textContent=data.length>0?data[0].email.split('@')[0]:'—';
+
+    let html="";
+    data.forEach((u,i)=>{
+      const rankBadge=i===0?`<span class="rank-gold">🥇 #1</span>`:i===1?`<span class="rank-silver">🥈 #2</span>`:i===2?`<span class="rank-bronze">🥉 #3</span>`:`<span style="color:var(--muted);font-family:var(--mono);font-size:12px">#${i+1}</span>`;
+      const roiCls=u.roi>=0?'roi-pos':'roi-neg';
+      const plCls=u.pl>=0?'up-val':'dn-val';
+      html+=`<tr>
+        <td>${rankBadge}</td>
+        <td class="neutral">#${u.userId}</td>
+        <td style="font-weight:700">${u.email}</td>
+        <td>₹${fmt(u.totalInvestment)}</td>
+        <td>₹${fmt(u.liveTotal)}</td>
+        <td class="${plCls}">${u.pl>=0?'+':''}₹${fmt(Math.abs(u.pl))}</td>
+        <td class="${roiCls}">${u.roi>=0?'+':''}${u.roi.toFixed(2)}%</td>
+        <td><button class="btn-view" onclick="viewUser(${u.userId},'${u.email}')">View →</button></td>
+      </tr>`;
+    });
+    if(!data.length) html=`<tr><td colspan="8"><div class="empty"><div class="empty-ico">👥</div><p>No users found</p></div></td></tr>`;
+    tbody.innerHTML=html;
+  } catch(e){ console.error(e); tbody.innerHTML=`<tr><td colspan="8"><div class="empty"><div class="empty-ico">⚠️</div><p>Error loading users</p></div></td></tr>`; }
+}
+
+// ══════════════════════════════════════════
+// VIEW USER
+// ══════════════════════════════════════════
+function viewUser(id, email){
+  currentUserId=id; currentUserEmail=email;
+  // Show user nav items
+  ['nav-userdetail','nav-portfolio','nav-watchlist','nav-history','nav-messages'].forEach(id=>{document.getElementById(id).style.display='flex';});
+  // Set header info
+  document.getElementById("udhAvatar").textContent=email[0].toUpperCase();
+  document.getElementById("udhName").textContent=email;
+  document.getElementById("udhId").textContent=`// USER_ID: ${id}`;
+  showSection('userdetail');
+  loadUserDashboard(id,email);
+  loadUserPortfolio(id);
+}
+
+// ══════════════════════════════════════════
+// USER DASHBOARD
+// ══════════════════════════════════════════
+async function loadUserDashboard(id, email){
+  try {
+    // Load portfolio data
+    const res=await apiRequest(`/admin/user/${id}/portfolio`);
+    if(!res||!res.ok) return;
+    const data=await res.json();
+    
+    // Load wallet data for invested amount (same as dashboard)
+    const walletRes=await apiRequest(`/admin/user/${id}/wallet`);
+    let walletInvested=0;
+    
+    if(walletRes && walletRes.ok){
+      const wallet=await walletRes.json();
+      walletInvested=wallet.investedAmount;
+      console.log("Admin Wallet Data:", wallet);
+      console.log("Admin Wallet Invested:", walletInvested);
+    } else {
+      console.log("Admin Wallet API failed:", walletRes);
+      // Fallback to portfolio calculation if wallet API fails
+      for(let s of data){
+        walletInvested += s.entryPrice * s.quantity;
+      }
+      console.log("Admin Fallback Invested:", walletInvested);
+    }
+    
+    // Calculate current portfolio value using live prices
+    let cur=0;
+    for(let s of data){
+      const lp=await getLivePrice(s.symbol);
+      cur+=lp*s.quantity;
+    }
+    
+    // Use wallet invested amount instead of portfolio calculation (same as dashboard)
+    const pl=cur-walletInvested;
+    document.getElementById("udTotalInv").textContent="₹"+fmt(walletInvested);
+    document.getElementById("udCurVal").textContent="₹"+fmt(cur);
+    const plEl=document.getElementById("udPL");
+    plEl.textContent=(pl>=0?'+':'')+'₹'+fmt(Math.abs(pl));
+    plEl.style.color=pl>=0?'var(--up)':'var(--down)';
+    if(data.length>0){
+      loadTVChart("udTVChart",data[0].symbol);
+      document.getElementById("udChartLabel").textContent="NSE:"+data[0].symbol;
+    }
+  } catch(e){ console.error(e); }
+}
+
+// ══════════════════════════════════════════
+// USER PORTFOLIO
+// ══════════════════════════════════════════
+async function loadUserPortfolio(id){
+  showSection('portfolio');
+  document.getElementById("portTitle").textContent=`Portfolio — ${currentUserEmail}`;
+  const tbody=document.getElementById("portBody");
+  tbody.innerHTML=`<tr><td colspan="8"><div class="empty"><p>Loading...</p></div></td></tr>`;
+  try {
+    const res=await apiRequest(`/admin/user/${id}/portfolio`);
+    if(!res||!res.ok){tbody.innerHTML=`<tr><td colspan="8"><div class="empty"><div class="empty-ico">⚠️</div><p>Failed</p></div></td></tr>`;return;}
+    const data=await res.json();
+    if(!data.length){tbody.innerHTML=`<tr><td colspan="8"><div class="empty"><div class="empty-ico">💼</div><p>No active positions</p></div></td></tr>`;return;}
+    let html="";
+    for(let s of data){
+      const lp=await getLivePrice(s.symbol);
+      const invested=s.entryPrice*s.quantity;
+      const curVal=lp*s.quantity;
+      const pl=curVal-invested;
+      const plPct=invested>0?((pl/invested)*100).toFixed(2):"0.00";
+      const cls=pl>=0?'up-val':'dn-val';
+      html+=`<tr>
+        <td class="sym-cell">📌 ${s.symbol}</td>
+        <td>${s.quantity}</td>
+        <td>₹${fmt(s.entryPrice)}</td>
+        <td>₹${fmt(lp)}</td>
+        <td>₹${fmt(curVal)}</td>
+        <td class="${cls}">${pl>=0?'+':''}₹${fmt(Math.abs(pl))}</td>
+        <td class="${cls}">${pl>=0?'+':''}${plPct}%</td>
+        <td><span class="${pl>=0?'type-buy':'type-sell'}">${pl>=0?'PROFIT':'LOSS'}</span></td>
+      </tr>`;
+    }
+    tbody.innerHTML=html;
+  } catch(e){ tbody.innerHTML=`<tr><td colspan="8"><div class="empty"><div class="empty-ico">⚠️</div><p>Error</p></div></td></tr>`; }
+}
+
+// ══════════════════════════════════════════
+// USER WATCHLIST
+// ══════════════════════════════════════════
+async function loadUserWatchlist(id){
+  if(!id) id=currentUserId;
+  showSection('watchlist');
+  document.getElementById("watchTitle").textContent=`Watchlist — ${currentUserEmail}`;
+  const tbody=document.getElementById("watchBody");
+  tbody.innerHTML=`<tr><td colspan="2"><div class="empty"><p>Loading...</p></div></td></tr>`;
+  try {
+    const res=await apiRequest(`/admin/user/${id}/watchlist`);
+    if(!res||!res.ok){tbody.innerHTML=`<tr><td colspan="2"><div class="empty"><div class="empty-ico">⚠️</div><p>Failed</p></div></td></tr>`;return;}
+    const data=await res.json();
+    if(!data.length){tbody.innerHTML=`<tr><td colspan="2"><div class="empty"><div class="empty-ico">👁</div><p>Empty watchlist</p></div></td></tr>`;return;}
+    let html="";
+    for(let s of data){
+      const lp=await getLivePrice(s.symbol);
+      html+=`<tr><td class="sym-cell">👁 ${s.symbol}</td><td>₹${fmt(lp)}</td></tr>`;
+    }
+    tbody.innerHTML=html;
+  } catch(e){ tbody.innerHTML=`<tr><td colspan="2"><div class="empty"><div class="empty-ico">⚠️</div><p>Error</p></div></td></tr>`; }
+}
+
+// ══════════════════════════════════════════
+// USER HISTORY
+// ══════════════════════════════════════════
+async function loadUserHistory(id){
+  if(!id) id=currentUserId;
+  showSection('history');
+  document.getElementById("histTitle").textContent=`Tradebook — ${currentUserEmail}`;
+  const tbody=document.getElementById("histBody");
+  tbody.innerHTML=`<tr><td colspan="7"><div class="empty"><p>Loading...</p></div></td></tr>`;
+  try {
+    const res=await apiRequest(`/admin/user/${id}/history`);
+    if(!res||!res.ok){tbody.innerHTML=`<tr><td colspan="7"><div class="empty"><div class="empty-ico">⚠️</div><p>Failed</p></div></td></tr>`;return;}
+    const data=await res.json();
+    if(!data||!data.length){tbody.innerHTML=`<tr><td colspan="7"><div class="empty"><div class="empty-ico">📋</div><p>No transactions</p></div></td></tr>`;return;}
+    let html="";
+    data.forEach(tx=>{
+      const type=tx.type;
+      const price=type==="BUY"?tx.entryPrice:tx.sellPrice;
+      const total=price?price*tx.quantity:0;
+      const pl=type==="SELL"?tx.profitLoss:"—";
+      const date=type==="BUY"?tx.entryDate:tx.sellDate;
+      const fdate=date?new Date(date).toLocaleString('en-IN',{day:'2-digit',month:'short',year:'numeric',hour:'2-digit',minute:'2-digit'}):"-";
+      html+=`<tr>
+        <td class="sym-cell">${tx.symbol}</td>
+        <td><span class="${type==='BUY'?'type-buy':'type-sell'}">${type}</span></td>
+        <td>${tx.quantity}</td>
+        <td>₹${price?fmt(price):'0'}</td>
+        <td>₹${fmt(total)}</td>
+        <td class="${pl==='—'?'neutral':pl>=0?'up-val':'dn-val'}">${pl==='—'?'—':(pl>=0?'+':'')+'₹'+fmt(Math.abs(pl))}</td>
+        <td class="neutral" style="font-size:11px">${fdate}</td>
+      </tr>`;
+    });
+    tbody.innerHTML=html;
+  } catch(e){ tbody.innerHTML=`<tr><td colspan="7"><div class="empty"><div class="empty-ico">⚠️</div><p>Error</p></div></td></tr>`; }
+}
+
+// ══════════════════════════════════════════
+// Override nav items for user sections
+// ══════════════════════════════════════════
+document.getElementById('nav-portfolio').addEventListener('click',()=>loadUserPortfolio(currentUserId));
+document.getElementById('nav-watchlist').addEventListener('click',()=>loadUserWatchlist(currentUserId));
+document.getElementById('nav-history').addEventListener('click',()=>loadUserHistory(currentUserId));
+
+// ══════════════════════════════════════════
+// TRADINGVIEW
+// ══════════════════════════════════════════
+function loadTVChart(containerId, symbol="RELIANCE"){
+  const el=document.getElementById(containerId);
+  if(!el)return;
+  el.innerHTML="";
+  try {
+    new TradingView.widget({container_id:containerId,symbol:"NSE:"+symbol,interval:"D",timezone:"Asia/Kolkata",theme:"dark",style:"1",locale:"en",toolbar_bg:"#0b1523",enable_publishing:false,allow_symbol_change:true,width:"100%",height:360});
+  } catch(e){ el.innerHTML=`<div class="empty" style="padding:60px"><div class="empty-ico">📈</div><p>Chart unavailable</p></div>`; }
+}
+
+// ══════════════════════════════════════════
+// API & HELPERS
+// ══════════════════════════════════════════
+async function apiRequest(endpoint, method="GET", body=null){
+  const token=localStorage.getItem("token");
+  if(!token){ window.location.href="login.html"; return null; }
+  try {
+    const headers = {"Authorization":"Bearer "+token};
+    
+    // Only set Content-Type for JSON data, not for FormData
+    if(body && !(body instanceof FormData)){
+      headers["Content-Type"] = "application/json";
+      body = JSON.stringify(body);
+    }
+    
+    const res=await fetch(BASE_URL+endpoint,{method,headers,body});
+    if(res.status===401){
+      Swal.fire({icon:'warning',title:'Session Expired',text:'Please login again.',timer:2000,showConfirmButton:false}).then(()=>{localStorage.removeItem("token");window.location.href="login.html";});
+      return null;
+    }
+    if(res.status===204) return null;
+    return res;
+  } catch(e){ console.error("API Error:",e); return null; }
+}
+
+function fmt(n){ return Number(n||0).toLocaleString('en-IN',{minimumFractionDigits:2,maximumFractionDigits:2}); }
+
+function logout(){
+  Swal.fire({icon:'question',title:'Logout?',text:'Exit admin panel?',showCancelButton:true,confirmButtonText:'Logout',cancelButtonText:'Cancel',confirmButtonColor:'#ff3d5a',background:'var(--surface)',color:'var(--text)',customClass:{popup:'swal2-popup'}})
+  .then(r=>{if(r.isConfirmed){localStorage.removeItem("token");window.location.href="login.html";}});
+}
+
+// Auto refresh users every 30s
+setInterval(()=>{ if(document.getElementById("secUsers").classList.contains("active")) loadUsers(); }, 30000);
+
+// ????????????????????????????????????????????????????
+// MESSAGING FUNCTIONS
+// ????????????????????????????????????????????????????
+
+// Set current user for messaging
+function setCurrentUserForMessaging() {
+  if (currentUserEmail && currentUserId) {
+    const display = document.getElementById("msgRecipientDisplay");
+    const userName = document.getElementById("msgUserEmail");
+    const userId = document.getElementById("msgUserId");
+    
+    display.querySelector(".msg-user-name").textContent = currentUserEmail.split('@')[0];
+    display.querySelector(".msg-user-email").textContent = currentUserEmail;
+    userName.textContent = currentUserEmail;
+    userId.textContent = `ID: ${currentUserId}`;
+  }
+}
+
+// Handle user selection in messaging dropdown
+function handleUserSelection() {
+  const select = document.getElementById("msgRecipient");
+  const userEmailSpan = document.getElementById("msgUserEmail");
+  const userIdSpan = document.getElementById("msgUserId");
+  
+  if (select.value) {
+    const selectedOption = select.options[select.selectedIndex];
+    userEmailSpan.textContent = selectedOption.textContent;
+    userIdSpan.textContent = `ID: ${select.value}`;
+  } else {
+    userEmailSpan.textContent = "Select a user";
+    userIdSpan.textContent = "";
+  }
+}
+
+// Character counter for message textarea
+function updateCharCount() {
+  const textarea = document.getElementById("msgContent");
+  const charCount = document.getElementById("msgCharCount");
+  const currentLength = textarea.value.length;
+  
+  charCount.textContent = currentLength;
+  
+  if (currentLength > 500) {
+    charCount.style.color = "var(--down)";
+    textarea.value = textarea.value.substring(0, 500);
+    charCount.textContent = 500;
+  } else if (currentLength > 400) {
+    charCount.style.color = "var(--orange)";
+  } else {
+    charCount.style.color = "var(--muted)";
+  }
+}
+
+// Send message to user
+async function sendMessage() {
+  const userId = currentUserId;
+  const message = document.getElementById("msgContent").value.trim();
+  
+  if (!userId) {
+    Swal.fire({icon: 'warning', title: 'No User Selected', text: 'Please select a user from dashboard to send message.'});
+    return;
+  }
+  
+  if (!message) {
+    Swal.fire({icon: 'warning', title: 'Empty Message', text: 'Please enter a message to send.'});
+    return;
+  }
+  
+  try {
+    const formData = new FormData();
+    formData.append('userId', userId);
+    formData.append('message', message);
+    
+    const res = await apiRequest("/api/admin-message/send", "POST", formData);
+    
+    if (res && res.ok) {
+      Swal.fire({
+        icon: 'success',
+        title: 'Message Sent!',
+        text: 'Message has been sent successfully.',
+        timer: 2000,
+        showConfirmButton: false
+      });
+      
+      clearMessageForm();
+      loadRecentMessages();
+    } else {
+      throw new Error('Failed to send message');
+    }
+  } catch(e) {
+    console.error("Error sending message:", e);
+    Swal.fire({
+      icon: 'error',
+      title: 'Send Failed',
+      text: 'Failed to send message. Please try again.'
+    });
+  }
+}
+
+// Clear message form
+function clearMessageForm() {
+  document.getElementById("msgContent").value = "";
+  document.getElementById("msgUserEmail").textContent = "Select a user";
+  document.getElementById("msgUserId").textContent = "";
+  document.getElementById("msgCharCount").textContent = "0";
+  document.getElementById("msgCharCount").style.color = "var(--muted)";
+}
+
+// Load recent messages
+async function loadRecentMessages() {
+  const messagesList = document.getElementById("messagesList");
+  messagesList.innerHTML = '<div class="loading-state"><div class="dots"><div class="dot"></div><div class="dot"></div><div class="dot"></div></div></div>';
+  
+  try {
+    // Load all messages sent by admin using existing endpoint
+    const res = await apiRequest("/api/admin-message/user");
+    if (!res || !res.ok) {
+      messagesList.innerHTML = '<div class="empty-state"><div class="empty-ico">??</div><p>Failed to load messages</p></div>';
+      return;
+    }
+    
+    const messages = await res.json();
+    
+    if (!messages || messages.length === 0) {
+      messagesList.innerHTML = '<div class="empty-state"><div class="empty-ico">??</div><p>No messages sent yet</p></div>';
+      return;
+    }
+    
+    // Show only last 5 messages
+    const recentMessages = messages.slice(-5).reverse();
+    
+    let html = "";
+    recentMessages.forEach(msg => {
+      const date = new Date(msg.dateTime).toLocaleString('en-IN', {
+        day: '2-digit',
+        month: 'short',
+        year: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit'
+      });
+      
+      html += `
+        <div class="message-item">
+          <div class="message-header">
+            <div class="message-user">${msg.user ? msg.user.email : 'Unknown User'}</div>
+            <div class="message-date">${date}</div>
+          </div>
+          <div class="message-content">${msg.message}</div>
+        </div>
+      `;
+    });
+    
+    messagesList.innerHTML = html;
+  } catch(e) {
+    console.error("Error loading messages:", e);
+    messagesList.innerHTML = '<div class="empty-state"><div class="empty-ico">??</div><p>Error loading messages</p></div>';
+  }
+}
+
+// View all messages
+async function viewAllMessages() {
+  try {
+    // Use existing endpoint without userId to get all messages
+    const res = await apiRequest("/api/admin-message/user");
+    if (!res || !res.ok) {
+      Swal.fire({
+        icon: 'error',
+        title: 'Failed to Load',
+        text: 'Could not load all messages',
+        confirmButtonColor: 'var(--accent)'
+      });
+      return;
+    }
+    
+    const messages = await res.json();
+    
+    if (!messages || messages.length === 0) {
+      Swal.fire({
+        icon: 'info',
+        title: 'No Messages',
+        text: 'No messages have been sent yet',
+        confirmButtonColor: 'var(--accent)'
+      });
+      return;
+    }
+    
+    // Sort messages by date (newest first)
+    messages.sort((a, b) => new Date(b.dateTime) - new Date(a.dateTime));
+    
+    // Create HTML for all messages
+    let messagesHtml = '<div style="max-height: 400px; overflow-y: auto;">';
+    messages.forEach(msg => {
+      const date = new Date(msg.dateTime).toLocaleString('en-IN', {
+        day: '2-digit',
+        month: 'short',
+        year: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit'
+      });
+      
+      messagesHtml += `
+        <div style="border-bottom: 1px solid #eee; padding: 12px 0;">
+          <div style="font-weight: 600; color: #00e590; margin-bottom: 4px;">To: ${msg.user ? msg.user.email : 'Unknown User'}</div>
+          <div style="font-size: 12px; color: #888; margin-bottom: 8px;">${date}</div>
+          <div style="color: #333; line-height: 1.4;">${msg.message}</div>
+        </div>
+      `;
+    });
+    messagesHtml += '</div>';
+    
+    Swal.fire({
+      title: `All Messages (${messages.length})`,
+      html: messagesHtml,
+      width: '600px',
+      confirmButtonColor: 'var(--accent)',
+      showCloseButton: true
+    });
+    
+  } catch(e) {
+    console.error("Error loading all messages:", e);
+    Swal.fire({
+      icon: 'error',
+      title: 'Error',
+      text: 'Failed to load messages',
+      confirmButtonColor: 'var(--accent)'
+    });
+  }
+}
+
+// Initialize messaging when section is shown
+function showSection(key) {
+  document.querySelectorAll('.section').forEach(s=>s.classList.remove('active'));
+  document.querySelectorAll('.nav-item').forEach(n=>n.classList.remove('active'));
+  document.getElementById(secMap[key]).classList.add('active');
+  const navEl=document.getElementById('nav-'+key);
+  if(navEl) navEl.classList.add('active');
+  document.getElementById("pageTitle").textContent = titleMap[key]||key;
+  
+  // Load messaging data when messages section is shown
+  if (key === 'messages') {
+    setCurrentUserForMessaging();
+    loadRecentMessages();
+  }
+}
+
+// Add event listeners
+document.addEventListener('DOMContentLoaded', function() {
+  const msgRecipient = document.getElementById("msgRecipient");
+  const msgContent = document.getElementById("msgContent");
+  
+  if (msgRecipient) {
+    msgRecipient.addEventListener('change', handleUserSelection);
+  }
+  
+  if (msgContent) {
+    msgContent.addEventListener('input', updateCharCount);
+  }
+});
+
+
+</script>
+</body>
+</html>

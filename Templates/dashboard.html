@@ -1,0 +1,2097 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>PMS — Dashboard</title>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600;700&family=Manrope:wght@400;600;700;800&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script src="https://s3.tradingview.com/tv.js"></script>
+<style>
+:root{
+  --bg:#050b14; --surface:#0b1523; --surface2:#0f1e30; --surface3:#13243a;
+  --border:#162234; --border2:#1e3048;
+  --accent:#00e5b0; --accent-dim:rgba(0,229,176,0.07); --accent-glow:rgba(0,229,176,0.2);
+  --blue:#2979ff; --orange:#ff6b2b;
+  --up:#00e5b0; --down:#ff3d5a;
+  --text:#ddeeff; --muted:#4a6d8c; --muted2:#6b8fad;
+  --sidebar:220px;
+  --mono:'JetBrains Mono',monospace; --sans:'Manrope',sans-serif;
+}
+*{margin:0;padding:0;box-sizing:border-box;}
+body{font-family:var(--sans);background:var(--bg);color:var(--text);display:flex;height:100vh;overflow:hidden;}
+
+/* SIDEBAR */
+.sidebar{width:var(--sidebar);background:var(--surface);border-right:1px solid var(--border);display:flex;flex-direction:column;height:100vh;flex-shrink:0;}
+.sidebar::after{content:'';position:absolute;top:0;left:0;width:var(--sidebar);height:2px;background:linear-gradient(90deg,var(--accent),var(--blue));}
+.brand{padding:20px;border-bottom:1px solid var(--border);}
+.brand-inner{display:flex;align-items:center;gap:10px;}
+.brand-ico{width:36px;height:36px;background:linear-gradient(135deg,var(--accent),#00b894);border-radius:9px;display:flex;align-items:center;justify-content:center;font-family:var(--mono);font-weight:700;font-size:15px;color:#000;box-shadow:0 0 14px var(--accent-glow);}
+.brand-name{font-size:16px;font-weight:800;letter-spacing:-0.5px;}
+.brand-sub{font-family:var(--mono);font-size:9px;color:var(--muted);letter-spacing:1px;}
+
+.nav{flex:1;padding:16px 12px;overflow-y:auto;}
+.nav-label{font-family:var(--mono);font-size:9px;text-transform:uppercase;letter-spacing:1.5px;color:var(--muted);padding:0 8px;margin-bottom:8px;margin-top:16px;}
+.nav-item{display:flex;align-items:center;gap:10px;padding:10px 12px;border-radius:8px;cursor:pointer;font-size:13px;font-weight:600;color:var(--muted2);transition:all 0.2s;margin-bottom:2px;}
+.nav-item:hover{background:var(--surface2);color:var(--text);}
+.nav-item.active{background:var(--accent-dim);color:var(--accent);border:1px solid rgba(0,229,176,0.15);}
+.nav-item.active .nav-ico{color:var(--accent);}
+.nav-ico{font-size:16px;width:18px;text-align:center;}
+
+.sidebar-footer{padding:16px 12px;border-top:1px solid var(--border);}
+.user-chip{display:flex;align-items:center;gap:10px;padding:10px 12px;background:var(--surface2);border-radius:8px;margin-bottom:10px;}
+.user-avatar{width:32px;height:32px;border-radius:50%;background:linear-gradient(135deg,var(--accent),var(--blue));display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;color:#000;flex-shrink:0;}
+.user-info{flex:1;overflow:hidden;}
+.user-email{font-size:11px;font-family:var(--mono);color:var(--muted2);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.user-role{font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:0.5px;}
+.btn-logout{width:100%;padding:9px;background:rgba(255,61,90,0.1);border:1px solid rgba(255,61,90,0.2);border-radius:8px;color:#ff3d5a;font-size:12px;font-weight:700;font-family:var(--sans);cursor:pointer;transition:all 0.3s;}
+.btn-logout:hover{background:rgba(255,61,90,0.2);}
+
+/* MAIN */
+.main{flex:1;display:flex;flex-direction:column;overflow:hidden;}
+
+/* TOPBAR */
+.topbar{height:54px;background:var(--surface);border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;padding:0 24px;flex-shrink:0;}
+.topbar-left{display:flex;align-items:center;gap:12px;}
+.page-title{font-size:16px;font-weight:800;letter-spacing:-0.3px;}
+.page-sub{font-family:var(--mono);font-size:11px;color:var(--muted);}
+.topbar-right{display:flex;align-items:center;gap:12px;}
+.market-badge{display:flex;align-items:center;gap:6px;font-family:var(--mono);font-size:11px;padding:5px 10px;border-radius:20px;border:1px solid rgba(0,229,176,0.2);background:var(--accent-dim);color:var(--accent);}
+.pulse{width:7px;height:7px;border-radius:50%;background:var(--accent);animation:pulse 1.5s ease-in-out infinite;}
+@keyframes pulse{0%,100%{opacity:1;transform:scale(1)}50%{opacity:0.5;transform:scale(0.85)}}
+.nifty-val{font-family:var(--mono);font-size:12px;color:var(--muted2);}
+.nifty-chg{color:var(--up);font-family:var(--mono);font-size:11px;}
+
+/* CONTENT */
+.content{flex:1;overflow-y:auto;padding:20px 24px;}
+.content::-webkit-scrollbar{width:4px;}
+.content::-webkit-scrollbar-thumb{background:var(--border2);border-radius:4px;}
+
+/* SECTION */
+.section{display:none;}
+.section.active{display:block;}
+
+/* TICKER MINI */
+.mini-ticker{display:flex;gap:12px;margin-bottom:20px;overflow-x:auto;padding-bottom:4px;}
+.mini-ticker::-webkit-scrollbar{display:none;}
+.ticker-pill{display:flex;align-items:center;gap:8px;background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:8px 12px;white-space:nowrap;flex-shrink:0;}
+.ticker-pill-sym{font-family:var(--mono);font-size:11px;font-weight:700;color:var(--text);}
+.ticker-pill-price{font-family:var(--mono);font-size:12px;color:var(--muted2);}
+.ticker-pill-chg{font-family:var(--mono);font-size:11px;}
+.chg-up{color:var(--up);} .chg-dn{color:var(--down);}
+
+/* CARDS */
+.cards{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;margin-bottom:22px;}
+.card{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:20px;position:relative;overflow:hidden;transition:border-color 0.3s;}
+.card:hover{border-color:var(--border2);}
+.card::before{content:'';position:absolute;top:0;left:0;right:0;height:2px;}
+.card.inv::before{background:linear-gradient(90deg,#2979ff,#00bcd4);}
+.card.cur::before{background:linear-gradient(90deg,var(--accent),#00b894);}
+.card.pl::before{background:linear-gradient(90deg,var(--orange),#ff6b35);}
+.card-label{font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:1px;font-family:var(--mono);margin-bottom:10px;}
+.card-val{font-size:26px;font-weight:800;font-family:var(--mono);letter-spacing:-1px;}
+.card-sub{font-size:11px;color:var(--muted2);margin-top:6px;font-family:var(--mono);}
+.card-ico{position:absolute;right:16px;top:16px;font-size:22px;opacity:0.4;}
+
+/* TABLE */
+.table-wrap{background:var(--surface);border:1px solid var(--border);border-radius:12px;overflow:hidden;margin-bottom:22px;}
+.table-head{display:flex;align-items:center;justify-content:space-between;padding:14px 18px;border-bottom:1px solid var(--border);}
+.table-title{font-size:14px;font-weight:700;}
+.table-actions{display:flex;gap:8px;}
+
+table{width:100%;border-collapse:collapse;}
+thead tr{background:var(--surface2);}
+th{padding:11px 14px;text-align:left;font-family:var(--mono);font-size:10px;text-transform:uppercase;letter-spacing:1px;color:var(--muted);font-weight:600;white-space:nowrap;}
+td{padding:12px 14px;font-size:13px;border-bottom:1px solid rgba(22,34,52,0.8);font-family:var(--mono);}
+tr:last-child td{border-bottom:none;}
+tbody tr{transition:background 0.15s;}
+tbody tr:hover{background:var(--surface2);}
+.sym-cell{font-weight:700;color:var(--text);}
+.up-val{color:var(--up);font-weight:700;}
+.dn-val{color:var(--down);font-weight:700;}
+.neutral{color:var(--muted2);}
+
+/* Buttons */
+.btn-add{display:flex;align-items:center;gap:6px;padding:8px 14px;background:linear-gradient(135deg,var(--accent),#00c896);border:none;border-radius:8px;color:#000;font-size:12px;font-weight:700;font-family:var(--sans);cursor:pointer;transition:all 0.3s;}
+.btn-add:hover{transform:translateY(-1px);box-shadow:0 6px 20px var(--accent-glow);}
+.btn-sell{padding:5px 12px;background:rgba(255,107,43,0.12);border:1px solid rgba(255,107,43,0.3);border-radius:6px;color:var(--orange);font-size:11px;font-weight:700;font-family:var(--mono);cursor:pointer;transition:all 0.2s;}
+.btn-sell:hover{background:rgba(255,107,43,0.25);}
+.btn-buy{padding:5px 12px;background:var(--accent-dim);border:1px solid rgba(0,229,176,0.25);border-radius:6px;color:var(--accent);font-size:11px;font-weight:700;font-family:var(--mono);cursor:pointer;transition:all 0.2s;}
+.btn-buy:hover{background:rgba(0,229,176,0.15);}
+.btn-remove{padding:5px 10px;background:rgba(255,61,90,0.1);border:1px solid rgba(255,61,90,0.2);border-radius:6px;color:#ff3d5a;font-size:11px;font-weight:700;font-family:var(--mono);cursor:pointer;transition:all 0.2s;}
+.btn-remove:hover{background:rgba(255,61,90,0.2);}
+.btn-sm{padding:5px 12px;background:var(--surface2);border:1px solid var(--border2);border-radius:6px;color:var(--muted2);font-size:11px;font-family:var(--mono);cursor:pointer;transition:all 0.2s;}
+.btn-sm:hover{color:var(--text);border-color:var(--muted);}
+
+/* Chart */
+.chart-box{background:var(--surface);border:1px solid var(--border);border-radius:12px;overflow:hidden;margin-bottom:22px;}
+.chart-box-head{display:flex;align-items:center;justify-content:space-between;padding:14px 18px;border-bottom:1px solid var(--border);}
+.chart-box-body{padding:4px;}
+
+/* Empty state */
+.empty{text-align:center;padding:40px 20px;color:var(--muted);}
+.empty-ico{font-size:36px;margin-bottom:12px;opacity:0.5;}
+.empty p{font-size:13px;font-family:var(--mono);}
+
+/* Type badge */
+.type-buy{display:inline-flex;padding:3px 8px;background:rgba(0,229,176,0.1);border-radius:4px;color:var(--up);font-size:10px;font-weight:700;}
+.type-sell{display:inline-flex;padding:3px 8px;background:rgba(255,61,90,0.1);border-radius:4px;color:var(--down);font-size:10px;font-weight:700;}
+
+/* MODAL */
+.modal-overlay{position:fixed;inset:0;background:rgba(5,11,20,0.85);backdrop-filter:blur(6px);z-index:1000;display:none;align-items:center;justify-content:center;animation:fadeIn 0.2s ease;}
+.modal-overlay.open{display:flex;}
+@keyframes fadeIn{from{opacity:0}to{opacity:1}}
+.modal{background:var(--surface);border:1px solid var(--border2);border-radius:16px;width:440px;max-width:95vw;overflow:hidden;animation:slideUp 0.3s ease;}
+@keyframes slideUp{from{opacity:0;transform:translateY(24px)}to{opacity:1;transform:translateY(0)}}
+.modal-top{display:flex;align-items:center;justify-content:space-between;padding:20px 22px;border-bottom:1px solid var(--border);}
+.modal-top h3{font-size:18px;font-weight:800;letter-spacing:-0.3px;}
+.modal-close{width:30px;height:30px;background:var(--surface2);border:1px solid var(--border2);border-radius:7px;display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:16px;color:var(--muted);transition:all 0.2s;}
+.modal-close:hover{color:var(--text);border-color:var(--muted);}
+.modal-body{padding:22px;}
+.modal-field{margin-bottom:16px;}
+.modal-field label{display:block;font-family:var(--mono);font-size:10px;text-transform:uppercase;letter-spacing:1.2px;color:var(--muted);margin-bottom:7px;}
+.modal-field-wrap{position:relative;}
+.modal-field-ico{position:absolute;left:13px;top:50%;transform:translateY(-50%);font-size:14px;color:var(--muted);pointer-events:none;}
+.modal-field input{width:100%;padding:12px 12px 12px 40px;background:var(--surface2);border:1px solid var(--border2);border-radius:8px;color:var(--text);font-size:13px;font-family:var(--mono);outline:none;transition:all 0.3s;}
+.modal-field input:focus{border-color:var(--accent);background:var(--accent-dim);box-shadow:0 0 0 3px rgba(0,229,176,0.06);}
+.modal-field input::placeholder{color:var(--muted);opacity:0.5;}
+.modal-price-preview{background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:12px 14px;margin-bottom:16px;display:flex;align-items:center;justify-content:space-between;}
+.mpp-label{font-family:var(--mono);font-size:11px;color:var(--muted);}
+.mpp-val{font-family:var(--mono);font-size:18px;font-weight:700;color:var(--accent);}
+.modal-foot{display:flex;gap:10px;padding:0 22px 22px;}
+.btn-modal-cancel{flex:1;padding:12px;background:transparent;border:1px solid var(--border2);border-radius:8px;color:var(--muted2);font-size:13px;font-weight:600;font-family:var(--sans);cursor:pointer;transition:all 0.2s;}
+.btn-modal-cancel:hover{border-color:var(--muted);color:var(--text);}
+.btn-modal-submit{flex:2;padding:12px;background:linear-gradient(135deg,var(--accent),#00c896);border:none;border-radius:8px;color:#000;font-size:13px;font-weight:800;font-family:var(--sans);cursor:pointer;transition:all 0.3s;}
+.btn-modal-submit:hover{box-shadow:0 6px 20px var(--accent-glow);}
+
+/* Watchlist symbol search */
+.modal-field .hint{font-family:var(--mono);font-size:10px;color:var(--muted);margin-top:5px;}
+
+/* SweetAlert */
+.swal2-popup{background:var(--surface)!important;border:1px solid var(--border2)!important;color:var(--text)!important;font-family:var(--sans)!important;border-radius:14px!important;}
+.swal2-title{color:var(--text)!important;}
+.swal2-html-container{color:var(--muted2)!important;font-family:var(--mono)!important;font-size:13px!important;}
+.swal2-confirm{background:var(--accent)!important;color:#000!important;font-weight:700!important;border-radius:8px!important;}
+.swal2-cancel{background:var(--surface2)!important;border:1px solid var(--border2)!important;color:var(--text)!important;border-radius:8px!important;}
+.swal2-input{background:var(--surface2)!important;border:1px solid var(--border2)!important;color:var(--text)!important;font-family:var(--mono)!important;}
+
+/* Loading dots */
+.dots{display:inline-flex;gap:4px;align-items:center;}
+.dot{width:6px;height:6px;background:#000;border-radius:50%;animation:dotB 1s ease-in-out infinite;}
+.dot:nth-child(2){animation-delay:0.15s}.dot:nth-child(3){animation-delay:0.3s}
+@keyframes dotB{0%,80%,100%{transform:scale(0.7);opacity:0.5}40%{transform:scale(1);opacity:1}}
+
+/* USER DASHBOARD MESSAGING STYLES */
+.messages-container{max-width:900px;margin:0 auto;}
+.messages-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:24px;padding-bottom:16px;border-bottom:1px solid var(--border);}
+.messages-title{font-size:24px;font-weight:800;letter-spacing:-0.5px;color:var(--text);}
+.messages-badge{display:flex;align-items:center;gap:6px;background:linear-gradient(135deg,var(--accent),#00b894);color:#000;padding:6px 12px;border-radius:20px;font-size:12px;font-weight:700;}
+.messages-badge span{font-family:var(--mono);}
+
+.messages-tabs{display:flex;gap:2px;margin-bottom:20px;background:var(--surface2);border-radius:10px;padding:4px;}
+.tab-btn{flex:1;padding:12px 16px;background:transparent;border:none;border-radius:8px;color:var(--muted);font-size:14px;font-weight:600;cursor:pointer;transition:all 0.2s;font-family:var(--sans);}
+.tab-btn.active{background:var(--surface);color:var(--text);box-shadow:0 2px 8px rgba(0,0,0,0.1);}
+.tab-btn:hover:not(.active){color:var(--text);}
+
+.messages-content{background:var(--surface);border:1px solid var(--border);border-radius:12px;overflow:hidden;}
+.messages-list{max-height:500px;overflow-y:auto;}
+.message-item{padding:20px;border-bottom:1px solid var(--border);transition:all 0.2s;position:relative;}
+.message-item:last-child{border-bottom:none;}
+.message-item:hover{background:var(--surface2);}
+.message-item.message-new{background:linear-gradient(90deg,rgba(0,229,176,0.05),transparent);border-left:3px solid var(--accent);}
+
+.message-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;}
+.message-from{font-size:12px;font-weight:600;color:var(--accent);text-transform:uppercase;letter-spacing:0.5px;}
+.message-date{font-size:11px;color:var(--muted);font-family:var(--mono);}
+
+.message-content{display:flex;flex-direction:column;gap:8px;}
+.message-text{font-size:15px;color:var(--text);line-height:1.6;}
+.message-badge{align-self:flex-start;background:var(--accent);color:#000;padding:4px 10px;border-radius:12px;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;}
+
+.empty-sub{font-size:12px;color:var(--muted);margin-top:4px;}
+.btn-retry{margin-top:16px;padding:8px 16px;background:var(--accent);color:#000;border:none;border-radius:6px;font-size:12px;font-weight:600;cursor:pointer;transition:all 0.2s;}
+.btn-retry:hover{background:var(--blue);color:#fff;}
+
+/* Responsive adjustments */
+@media (max-width:768px){
+  .messages-container{margin:0 16px;}
+  .messages-header{flex-direction:column;gap:12px;align-items:flex-start;}
+  .messages-title{font-size:20px;}
+  .message-item{padding:16px;}
+  .message-content{gap:6px;}
+  .message-text{font-size:14px;}
+}
+
+/* AI CHATBOT STYLES */
+.ai-chat-btn{
+  display:flex;
+  align-items:center;
+  gap:6px;
+  padding:8px 14px;
+  background:linear-gradient(135deg,var(--accent),var(--blue));
+  border:1px solid rgba(0,229,176,0.3);
+  border-radius:8px;
+  color:#000;
+  font-size:12px;
+  font-weight:600;
+  font-family:var(--mono);
+  cursor:pointer;
+  transition:all 0.3s;
+  position:relative;
+}
+.ai-chat-btn:hover{
+  transform:translateY(-1px);
+  box-shadow:0 4px 12px var(--accent-glow);
+  background:linear-gradient(135deg,var(--blue),var(--accent));
+}
+.ai-btn-icon{
+  font-size:14px;
+  animation:aiPulse 2s ease-in-out infinite;
+}
+@keyframes aiPulse{
+  0%,100%{transform:scale(1);}50%{transform:scale(1.1);}
+}
+
+/* Enhanced AI Message Styles */
+.ai-message-content{
+  line-height:1.6;
+}
+.ai-message-content .ai-topic{
+  font-size:15px;
+  font-weight:700;
+  color:var(--accent);
+  margin:16px 0 8px 0;
+  padding-bottom:4px;
+  border-bottom:2px solid var(--accent-dim);
+}
+.ai-message-content .ai-topic:first-child{
+  margin-top:0;
+}
+.ai-message-content .ai-subtopic{
+  font-size:14px;
+  font-weight:600;
+  color:var(--text);
+  margin:12px 0 6px 0;
+  display:flex;
+  align-items:center;
+  gap:6px;
+}
+.ai-message-content .ai-subtopic::before{
+  content:'▸';
+  color:var(--accent);
+  font-size:12px;
+}
+.ai-message-content ul{
+  margin:8px 0;
+  padding-left:20px;
+  list-style:none;
+}
+.ai-message-content li{
+  margin:6px 0;
+  padding-left:8px;
+  position:relative;
+  font-size:13px;
+  color:var(--muted2);
+}
+.ai-message-content li::before{
+  content:'•';
+  position:absolute;
+  left:-12px;
+  top:0;
+  color:var(--accent);
+  font-weight:700;
+}
+.ai-message-content .ai-highlight{
+  background:var(--accent-dim);
+  color:var(--accent);
+  padding:2px 6px;
+  border-radius:4px;
+  font-weight:600;
+  font-family:var(--mono);
+  font-size:12px;
+}
+.ai-message-content .ai-bold{
+  font-weight:700;
+  color:var(--text);
+}
+.ai-message-content .ai-info-box{
+  background:var(--surface2);
+  border:1px solid var(--border2);
+  border-left:3px solid var(--accent);
+  border-radius:6px;
+  padding:10px 12px;
+  margin:8px 0;
+  font-size:12px;
+  color:var(--muted2);
+}
+.ai-message-content .ai-warning-box{
+  background:rgba(255,107,43,0.1);
+  border:1px solid rgba(255,107,43,0.3);
+  border-left:3px solid var(--orange);
+  border-radius:6px;
+  padding:10px 12px;
+  margin:8px 0;
+  font-size:12px;
+  color:var(--orange);
+}
+
+/* Chatbot Panel */
+.chatbot-panel{
+  position:fixed;
+  right:0;
+  top:0;
+  width:380px;
+  height:100vh;
+  background:var(--surface);
+  border-left:1px solid var(--border);
+  transform:translateX(100%);
+  transition:transform 0.3s ease;
+  z-index:1000;
+  display:flex;
+  flex-direction:column;
+}
+.chatbot-panel.open{
+  transform:translateX(0);
+  box-shadow:-4px 0 20px rgba(0,0,0,0.3);
+}
+
+.chatbot-header{
+  background:linear-gradient(135deg,var(--accent),var(--blue));
+  padding:16px 20px;
+  border-bottom:1px solid rgba(255,255,255,0.1);
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  color:#000;
+}
+.chatbot-title{
+  display:flex;
+  align-items:center;
+  gap:10px;
+  font-size:16px;
+  font-weight:700;
+}
+.chatbot-status{
+  display:flex;
+  align-items:center;
+  gap:6px;
+  font-size:11px;
+  font-family:var(--mono);
+  opacity:0.9;
+}
+.status-dot{
+  width:8px;
+  height:8px;
+  border-radius:50%;
+  background:#fff;
+  animation:pulse 1.5s infinite;
+}
+.close-chatbot{
+  background:rgba(255,255,255,0.2);
+  border:1px solid rgba(255,255,255,0.3);
+  border-radius:6px;
+  color:#000;
+  width:28px;
+  height:28px;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  cursor:pointer;
+  transition:all 0.2s;
+  font-size:16px;
+}
+.close-chatbot:hover{
+  background:rgba(255,255,255,0.3);
+}
+
+.chatbot-messages{
+  flex:1;
+  overflow-y:auto;
+  padding:20px;
+  display:flex;
+  flex-direction:column;
+  gap:12px;
+}
+.chatbot-messages::-webkit-scrollbar{
+  width:4px;
+}
+.chatbot-messages::-webkit-scrollbar-thumb{
+  background:var(--border2);
+  border-radius:4px;
+}
+
+.message{
+  max-width:85%;
+  padding:12px 16px;
+  border-radius:12px;
+  font-size:14px;
+  line-height:1.4;
+  word-wrap:break-word;
+}
+.message.user{
+  background:linear-gradient(135deg,var(--accent),var(--blue));
+  color:#000;
+  align-self:flex-end;
+  border-bottom-right-radius:4px;
+}
+.message.ai{
+  background:var(--surface2);
+  border:1px solid var(--border2);
+  color:var(--text);
+  align-self:flex-start;
+  border-bottom-left-radius:4px;
+}
+.message-time{
+  font-size:10px;
+  opacity:0.7;
+  margin-top:4px;
+  font-family:var(--mono);
+}
+
+.chatbot-input{
+  padding:16px;
+  border-top:1px solid var(--border);
+  background:var(--surface2);
+}
+.chat-input-wrapper{
+  display:flex;
+  gap:8px;
+  align-items:flex-end;
+}
+.chat-input{
+  flex:1;
+  background:var(--bg);
+  border:1px solid var(--border2);
+  border-radius:8px;
+  padding:10px 14px;
+  color:var(--text);
+  font-size:14px;
+  font-family:var(--sans);
+  resize:none;
+  max-height:100px;
+  transition:all 0.2s;
+}
+.chat-input:focus{
+  outline:none;
+  border-color:var(--accent);
+  box-shadow:0 0 0 3px rgba(0,229,176,0.1);
+}
+.chat-send-btn{
+  background:linear-gradient(135deg,var(--accent),var(--blue));
+  border:none;
+  border-radius:8px;
+  color:#000;
+  width:40px;
+  height:40px;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  cursor:pointer;
+  transition:all 0.2s;
+  font-size:16px;
+}
+.chat-send-btn:hover:not(:disabled){
+  transform:scale(1.05);
+  box-shadow:0 4px 12px var(--accent-glow);
+}
+.chat-send-btn:disabled{
+  opacity:0.5;
+  cursor:not-allowed;
+}
+
+.typing-indicator{
+  display:flex;
+  align-items:center;
+  gap:4px;
+  padding:12px 16px;
+  background:var(--surface2);
+  border:1px solid var(--border2);
+  border-radius:12px;
+  border-bottom-left-radius:4px;
+  width:fit-content;
+}
+.typing-dot{
+  width:6px;
+  height:6px;
+  border-radius:50%;
+  background:var(--muted);
+  animation:typingDot 1.4s infinite ease-in-out both;
+}
+.typing-dot:nth-child(1){animation-delay:-0.32s;}
+.typing-dot:nth-child(2){animation-delay:-0.16s;}
+@keyframes typingDot{
+  0%,80%,100%{transform:scale(0.8);opacity:0.5;}
+  40%{transform:scale(1);opacity:1;}
+}
+
+</style>
+</head>
+<body>
+
+<!-- SIDEBAR -->
+<div class="sidebar">
+  <div class="brand">
+    <div class="brand-inner">
+      <div class="brand-ico">P</div>
+      <div><div class="brand-name">PMS</div><div class="brand-sub">PORTFOLIO MGT.</div></div>
+    </div>
+  </div>
+  <div class="nav">
+    <div class="nav-label">Main</div>
+    <div class="nav-item active" onclick="showSection('dashboard')"><span class="nav-ico">📊</span>Dashboard</div>
+    <div class="nav-item" onclick="showSection('portfolio')"><span class="nav-ico">💼</span>Portfolio</div>
+    <div class="nav-label">Market</div>
+    <div class="nav-item" onclick="showSection('watchlist')"><span class="nav-ico">👁</span>Watchlist</div>
+    <div class="nav-item" onclick="showSection('history')"><span class="nav-ico">📋</span>Tradebook</div>
+    <div class="nav-label">Finance</div>
+    <div class="nav-item" onclick="showSection('wallet')"><span class="nav-ico">💸</span>Wallet</div>
+    <div class="nav-item" onclick="showSection('messages')"><span class="nav-ico">📨</span>Messages</div>
+  </div>
+  <div class="sidebar-footer">
+    <div class="user-chip">
+      <div class="user-avatar" id="userAvatar">U</div>
+      <div class="user-info">
+        <div class="user-email" id="sidebarEmail">user@pms.com</div>
+        <div class="user-role">Investor</div>
+      </div>
+    </div>
+    <button class="btn-logout" onclick="logout()">⏻ Logout</button>
+  </div>
+</div>
+
+<!-- MAIN -->
+<div class="main">
+  <!-- TOPBAR -->
+  <div class="topbar">
+    <div class="topbar-left">
+      <div>
+        <div class="page-title" id="pageTitle">Dashboard</div>
+        <div class="page-sub" id="pageDate"></div>
+      </div>
+    </div>
+    <div class="topbar-right">
+      <div class="nifty-val">NIFTY <span class="nifty-chg">22,419 &#9650;1.2%</span></div>
+      <div class="nifty-val">SENSEX <span class="nifty-chg">73,841 &#9650;0.9%</span></div>
+      <button class="ai-chat-btn" onclick="toggleChatbot()" id="aiChatBtn">
+        <span class="ai-btn-icon">&#129302;</span> AI Assistant
+      </button>
+      <div class="market-badge"><div class="pulse"></div>Market Live</div>
+    </div>
+  </div>
+
+  <!-- CONTENT -->
+  <div class="content">
+
+    <!-- MINI TICKER -->
+    <div class="mini-ticker" id="miniTicker"></div>
+
+    <!-- ═══ DASHBOARD SECTION ═══ -->
+    <div class="section active" id="secDashboard">
+      <div class="cards">
+        <div class="card inv">
+          <div class="card-ico">💰</div>
+          <div class="card-label">Total Investment</div>
+          <div class="card-val" id="totalInvestment">₹0</div>
+          <div class="card-sub" id="invSub">— stocks held</div>
+        </div>
+        <div class="card cur">
+          <div class="card-ico">📈</div>
+          <div class="card-label">Current Value</div>
+          <div class="card-val" id="currentValue">₹0</div>
+          <div class="card-sub" id="curSub">Live market price</div>
+        </div>
+        <div class="card pl">
+          <div class="card-ico">⚡</div>
+          <div class="card-label">Total P/L</div>
+          <div class="card-val" id="profitLoss">₹0</div>
+          <div class="card-sub" id="plSub">Overall return</div>
+        </div>
+              </div>
+      <div class="chart-box">
+        <div class="chart-box-head">
+          <div class="table-title">Live Market Chart</div>
+          <span class="page-sub" id="chartSymLabel">NSE:RELIANCE</span>
+        </div>
+        <div class="chart-box-body">
+          <div id="tvDashChart" style="height:380px;"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ═══ PORTFOLIO SECTION ═══ -->
+    <div class="section" id="secPortfolio">
+      <div class="table-wrap">
+        <div class="table-head">
+          <div class="table-title">Active Portfolio</div>
+          <div class="table-actions">
+            <button class="btn-add" onclick="openAddStockModal()">＋ Add Stock</button>
+          </div>
+        </div>
+        <table>
+          <thead><tr>
+            <th>Symbol</th><th>Qty</th><th>Buy Price</th><th>Current</th>
+            <th>Total Value</th><th>P/L</th><th>P/L %</th><th>Action</th>
+          </tr></thead>
+          <tbody id="portfolioBody"><tr><td colspan="8"><div class="empty"><div class="empty-ico">�</div><p>Loading portfolio...</p></div></td></tr></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- ═══ WATCHLIST SECTION ═══ -->
+    <div class="section" id="secWatchlist">
+      <div class="table-wrap">
+        <div class="table-head">
+          <div class="table-title">My Watchlist</div>
+          <div class="table-actions">
+            <button class="btn-add" onclick="openAddWatchlistModal()">＋ Add Stock</button>
+          </div>
+        </div>
+        <table>
+          <thead><tr><th>Symbol</th><th>Current Price</th><th>Change</th><th>Action</th></tr></thead>
+          <tbody id="watchlistBody"><tr><td colspan="4"><div class="empty"><div class="empty-ico">👁</div><p>No stocks in watchlist</p></div></td></tr></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- ═══ HISTORY SECTION ═══ -->
+    <div class="section" id="secHistory">
+      <div class="table-wrap">
+        <div class="table-head">
+          <div class="table-title">Tradebook</div>
+        </div>
+        <table>
+          <thead><tr><th>Symbol</th><th>Type</th><th>Qty</th><th>Price</th><th>Total</th><th>P/L</th><th>Date</th></tr></thead>
+          <tbody id="historyBody"><tr><td colspan="7"><div class="empty"><div class="empty-ico">📋</div><p>No transactions found</p></div></td></tr></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- ═══ WALLET SECTION ═══ -->
+    <div class="section" id="secWallet">
+      <div class="cards">
+        <div class="card cur">
+          <div class="card-ico">💸</div>
+          <div class="card-label">Available Balance</div>
+          <div class="card-val" id="walletBalance">₹0</div>
+          <div class="card-sub">Ready to invest</div>
+        </div>
+        <div class="card inv">
+          <div class="card-ico">💸</div>
+          <div class="card-label">Invested Amount</div>
+          <div class="card-val" id="walletInvested">₹0</div>
+          <div class="card-sub">Currently invested</div>
+        </div>
+        <div class="card pl">
+          <div class="card-ico">💸</div>
+          <div class="card-label">Total Wallet Value</div>
+          <div class="card-val" id="walletTotal">₹0</div>
+          <div class="card-sub">Balance + Investments</div>
+        </div>
+      </div>
+      
+      <div class="table-wrap">
+        <div class="table-head">
+          <div class="table-title">Wallet Transactions</div>
+          <div class="table-actions">
+            <button class="btn-add" onclick="openAddFundsModal()">💸 Add Funds</button>
+            <button class="btn-buy" onclick="openInvestModal()">💰 Invest</button>
+            <button class="btn-sell" onclick="openWithdrawModal()">💸 Withdraw</button>
+          </div>
+        </div>
+        <table>
+          <thead><tr><th>ID</th><th>Type</th><th>Amount</th><th>Date & Time</th></tr></thead>
+          <tbody id="walletTransactionsBody"><tr><td colspan="4"><div class="empty"><div class="empty-ico">💸</div><p>Loading wallet transactions...</p></div></td></tr></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- ═══ MESSAGES SECTION ═══ -->
+    <div class="section" id="secMessages">
+      <div class="messages-container">
+        <div class="messages-header">
+          <div class="messages-title">Admin Messages</div>
+          <div class="messages-badge" id="unreadBadge" style="display: none;">
+            <span id="unreadCount">0</span> New
+          </div>
+        </div>
+        
+        <div class="messages-tabs">
+          <button class="tab-btn active" onclick="showMessagesTab('recent')">Recent Messages</button>
+          <button class="tab-btn" onclick="showMessagesTab('all')">All Messages</button>
+        </div>
+        
+        <div class="messages-content" id="messagesContent">
+          <div class="messages-list" id="recentMessages">
+            <div class="loading-state">
+              <div class="dots">
+                <div class="dot" style="background:var(--accent)"></div>
+                <div class="dot" style="background:var(--accent)"></div>
+                <div class="dot" style="background:var(--accent)"></div>
+              </div>
+            </div>
+          </div>
+          
+          <div class="messages-list" id="allMessages" style="display: none;">
+            <div class="loading-state">
+              <div class="dots">
+                <div class="dot" style="background:var(--accent)"></div>
+                <div class="dot" style="background:var(--accent)"></div>
+                <div class="dot" style="background:var(--accent)"></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div><!-- /content -->
+</div><!-- /main -->
+
+<!-- CHATBOT PANEL -->
+<div class="chatbot-panel" id="chatbotPanel">
+  <div class="chatbot-header">
+    <div class="chatbot-title">
+      <span>&#129302;</span>
+      <span>AI Portfolio Assistant</span>
+    </div>
+    <div class="chatbot-status">
+      <div class="status-dot"></div>
+      <span>Online</span>
+    </div>
+    <button class="close-chatbot" onclick="toggleChatbot()">×</button>
+  </div>
+  
+  <div class="chatbot-messages" id="chatMessages">
+    <div class="message ai">
+      <div class="ai-message-content">
+        <p>Hello! I'm your AI Portfolio Assistant. I can help you with:</p>
+        
+        ### Investment Analysis
+        - Portfolio performance review
+        - Risk assessment and diversification
+        - Asset allocation recommendations
+        
+        ### Market Insights
+        - Real-time market trends
+        - Stock analysis and predictions
+        - Sector performance tracking
+        
+        ### Financial Guidance
+        - Investment strategy development
+        - Goal-based planning
+        - Risk management techniques
+        
+        <div class="ai-info-box">📋 Try asking: "Suggest investment strategy" or "Analyze my portfolio risk"</div>
+      </div>
+      <div class="message-time">Just now</div>
+    </div>
+  </div>
+  
+  <div class="chatbot-input">
+    <div class="chat-input-wrapper">
+      <textarea 
+        id="chatInput" 
+        class="chat-input" 
+        placeholder="Ask about portfolio analysis, investment advice, market trends..."
+        rows="1"
+        onkeypress="handleChatKeyPress(event)"
+        oninput="autoResizeTextarea(this)"></textarea>
+      <button class="chat-send-btn" id="chatSendBtn" onclick="sendMessage()">
+        <span>></span>
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- ═══ ADD STOCK MODAL ═══ -->
+<div class="modal-overlay" id="addStockModal" onclick="closeModalOutside(event,'addStockModal')">
+  <div class="modal">
+    <div class="modal-top">
+      <h3>➕ Add Stock</h3>
+      <div class="modal-close" onclick="closeModal('addStockModal')">✕</div>
+    </div>
+    <div class="modal-body">
+      <div class="modal-field">
+        <label>Stock Symbol</label>
+        <div class="modal-field-wrap">
+          <span class="modal-field-ico">📌</span>
+          <input type="text" id="addSymbol" placeholder="e.g. RELIANCE, TCS, INFY" oninput="this.value=this.value.toUpperCase()" onblur="fetchPreviewPrice()">
+        </div>
+        <div class="hint">NSE/BSE symbol — price fetched automatically</div>
+      </div>
+      <div class="modal-field">
+        <label>Quantity</label>
+        <div class="modal-field-wrap">
+          <span class="modal-field-ico">#</span>
+          <input type="number" id="addQty" placeholder="e.g. 10" min="1">
+        </div>
+      </div>
+      <div class="modal-field">
+        <label>Target Price (Optional)</label>
+        <div class="modal-field-wrap">
+          <span class="modal-field-ico">🎯</span>
+          <input type="number" id="addCap" placeholder="Set target price (optional)">
+        </div>
+      </div>
+      <div class="modal-price-preview">
+        <div>
+          <div class="mpp-label">Live Buy Price</div>
+          <div class="mpp-val" id="previewPrice">—</div>
+        </div>
+        <div style="text-align:right;">
+          <div class="mpp-label">Est. Investment</div>
+          <div style="font-family:var(--mono);font-size:14px;color:var(--muted2);" id="estInvestment">—</div>
+        </div>
+      </div>
+    </div>
+    <div class="modal-foot">
+      <button class="btn-modal-cancel" onclick="closeModal('addStockModal')">Cancel</button>
+      <button class="btn-modal-submit" id="addStockSubmitBtn" onclick="addStock()">Buy at Live Price</button>
+    </div>
+  </div>
+</div>
+
+<!-- ═══ SELL MODAL ═══ -->
+<div class="modal-overlay" id="sellModal" onclick="closeModalOutside(event,'sellModal')">
+  <div class="modal">
+    <div class="modal-top">
+      <h3>💸 Sell Stock</h3>
+      <div class="modal-close" onclick="closeModal('sellModal')">✕</div>
+    </div>
+    <div class="modal-body">
+      <div class="modal-price-preview">
+        <div><div class="mpp-label">Selling</div><div class="mpp-val" id="sellSymLabel">—</div></div>
+        <div style="text-align:right;"><div class="mpp-label">Live Price</div><div style="font-family:var(--mono);font-size:18px;font-weight:700;color:var(--orange);" id="sellPriceLabel">—</div></div>
+      </div>
+      <div class="modal-field">
+        <label>Quantity to Sell</label>
+        <div class="modal-field-wrap">
+          <span class="modal-field-ico">#</span>
+          <input type="number" id="sellQtyInput" placeholder="Enter quantity" min="1">
+        </div>
+        <div class="hint" id="sellMaxHint">Max available: —</div>
+      </div>
+    </div>
+    <div class="modal-foot">
+      <button class="btn-modal-cancel" onclick="closeModal('sellModal')">Cancel</button>
+      <button class="btn-modal-submit" style="background:linear-gradient(135deg,var(--orange),#e55a1f);" onclick="confirmSell()">Confirm Sell</button>
+    </div>
+  </div>
+</div>
+
+<!-- ═══ ADD WATCHLIST MODAL ═══ -->
+<div class="modal-overlay" id="addWatchlistModal" onclick="closeModalOutside(event,'addWatchlistModal')">
+  <div class="modal">
+    <div class="modal-top">
+      <h3>👁 Add to Watchlist</h3>
+      <div class="modal-close" onclick="closeModal('addWatchlistModal')">✕</div>
+    </div>
+    <div class="modal-body">
+      <div class="modal-field">
+        <label>Stock Symbol</label>
+        <div class="modal-field-wrap">
+          <span class="modal-field-ico">📌</span>
+          <input type="text" id="watchSymbol" placeholder="e.g. RELIANCE, TCS" oninput="this.value=this.value.toUpperCase()">
+        </div>
+        <div class="hint">Enter NSE/BSE stock symbol</div>
+      </div>
+    </div>
+    <div class="modal-foot">
+      <button class="btn-modal-cancel" onclick="closeModal('addWatchlistModal')">Cancel</button>
+      <button class="btn-modal-submit" onclick="addToWatchlist()">Add to Watchlist</button>
+    </div>
+  </div>
+</div>
+
+<!-- ═══ ADD FUNDS MODAL ═══ -->
+<div class="modal-overlay" id="addFundsModal" onclick="closeModalOutside(event,'addFundsModal')">
+  <div class="modal">
+    <div class="modal-top">
+      <h3>💸 Add Funds</h3>
+      <div class="modal-close" onclick="closeModal('addFundsModal')">✕</div>
+    </div>
+    <div class="modal-body">
+      <div class="modal-field">
+        <label>Amount to Add</label>
+        <div class="modal-field-wrap">
+          <span class="modal-field-ico">💸</span>
+          <input type="number" id="addFundsAmount" placeholder="Enter amount" min="1" step="0.01">
+        </div>
+        <div class="hint">Add funds to your wallet balance</div>
+      </div>
+    </div>
+    <div class="modal-foot">
+      <button class="btn-modal-cancel" onclick="closeModal('addFundsModal')">Cancel</button>
+      <button class="btn-modal-submit" onclick="confirmAddFunds()">Add Funds</button>
+    </div>
+  </div>
+</div>
+
+<!-- ═══ INVEST MODAL ═══ -->
+<div class="modal-overlay" id="investModal" onclick="closeModalOutside(event,'investModal')">
+  <div class="modal">
+    <div class="modal-top">
+      <h3>💰 Invest Funds</h3>
+      <div class="modal-close" onclick="closeModal('investModal')">✕</div>
+    </div>
+    <div class="modal-body">
+      <div class="modal-price-preview">
+        <div><div class="mpp-label">Available Balance</div><div class="mpp-val" id="availableBalanceLabel">₹0</div></div>
+        <div style="text-align:right;"><div class="mpp-label">Current Investment</div><div style="font-family:var(--mono);font-size:18px;font-weight:700;color:var(--accent);" id="currentInvestmentLabel">₹0</div></div>
+      </div>
+      <div class="modal-field">
+        <label>Amount to Invest</label>
+        <div class="modal-field-wrap">
+          <span class="modal-field-ico">💸</span>
+          <input type="number" id="investAmount" placeholder="Enter amount to invest" min="1" step="0.01">
+        </div>
+        <div class="hint" id="investMaxHint">Maximum available: ₹0</div>
+      </div>
+    </div>
+    <div class="modal-foot">
+      <button class="btn-modal-cancel" onclick="closeModal('investModal')">Cancel</button>
+      <button class="btn-modal-submit" onclick="confirmInvest()">Invest</button>
+    </div>
+  </div>
+</div>
+
+<!-- ═══ WITHDRAW MODAL ═══ -->
+<div class="modal-overlay" id="withdrawModal" onclick="closeModalOutside(event,'withdrawModal')">
+  <div class="modal">
+    <div class="modal-top">
+      <h3>💸 Withdraw Funds</h3>
+      <div class="modal-close" onclick="closeModal('withdrawModal')">✕</div>
+    </div>
+    <div class="modal-body">
+      <div class="modal-price-preview">
+        <div><div class="mpp-label">Available Balance</div><div class="mpp-val" id="withdrawBalanceLabel">₹0</div></div>
+        <div style="text-align:right;"><div class="mpp-label">Withdrawable</div><div style="font-family:var(--mono);font-size:18px;font-weight:700;color:var(--orange);" id="withdrawableLabel">₹0</div></div>
+      </div>
+      <div class="modal-field">
+        <label>Amount to Withdraw</label>
+        <div class="modal-field-wrap">
+          <span class="modal-field-ico">💸</span>
+          <input type="number" id="withdrawAmount" placeholder="Enter amount to withdraw" min="1" step="0.01">
+        </div>
+        <div class="hint" id="withdrawMaxHint">Maximum withdrawable: ₹0</div>
+      </div>
+    </div>
+    <div class="modal-foot">
+      <button class="btn-modal-cancel" onclick="closeModal('withdrawModal')">Cancel</button>
+      <button class="btn-modal-submit" style="background:linear-gradient(135deg,var(--orange),#e55a1f);" onclick="confirmWithdraw()">Withdraw</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// ══════════════════════════════════════════
+// CONFIG & CACHE
+// ══════════════════════════════════════════
+const BASE_URL = "http://localhost:8080";
+const priceCache = {};
+const CACHE_TIME = 10000;
+let currentSellId = null;
+let currentSellSym = null;
+let currentSellQty = 0;
+
+// ══════════════════════════════════════════
+// INIT
+// ══════════════════════════════════════════
+window.onload = function() {
+  const token = localStorage.getItem("token");
+  if(!token || token === "null"){
+    Swal.fire({icon:'warning',title:'Not Logged In',text:'Please login first.',timer:1500,showConfirmButton:false})
+      .then(()=>{ window.location.href="login.html"; });
+    return;
+  }
+  const email = localStorage.getItem("userEmail") || "Investor";
+  document.getElementById("sidebarEmail").textContent = email;
+  document.getElementById("userAvatar").textContent = email[0].toUpperCase();
+  document.getElementById("pageDate").textContent = new Date().toLocaleDateString('en-IN',{weekday:'long',year:'numeric',month:'long',day:'numeric'});
+  buildMiniTicker();
+  loadAllData();
+  showSection('dashboard');
+};
+
+// ══════════════════════════════════════════
+// MINI TICKER
+// ══════════════════════════════════════════
+const tickerStocks=[{sym:"RELIANCE",price:"2,945",chg:"+1.24%",up:true},{sym:"TCS",price:"3,812",chg:"-0.38%",up:false},{sym:"INFY",price:"1,543",chg:"+2.10%",up:true},{sym:"HDFC",price:"1,672",chg:"+0.87%",up:true},{sym:"WIPRO",price:"462",chg:"-1.05%",up:false},{sym:"BAJFINANCE",price:"6,890",chg:"+3.12%",up:true},{sym:"SBIN",price:"780",chg:"-0.22%",up:false},{sym:"ICICIBANK",price:"1,145",chg:"+1.55%",up:true}];
+function buildMiniTicker(){
+  const c=document.getElementById("miniTicker");
+  tickerStocks.forEach(s=>{
+    c.innerHTML+=`<div class="ticker-pill"><span class="ticker-pill-sym">${s.sym}</span><span class="ticker-pill-price">₹${s.price}</span><span class="ticker-pill-chg ${s.up?'chg-up':'chg-dn'}">${s.chg}</span></div>`;
+  });
+}
+
+// ══════════════════════════════════════════
+// SECTION SWITCH
+// ══════════════════════════════════════════
+const sectionMap = {dashboard:'secDashboard',portfolio:'secPortfolio',watchlist:'secWatchlist',history:'secHistory',wallet:'secWallet',messages:'secMessages'};
+const titleMap   = {dashboard:'Dashboard',portfolio:'Portfolio',watchlist:'Watchlist',history:'Tradebook',wallet:'Wallet',messages:'Messages'};
+
+function showSection(key){
+  document.querySelectorAll('.section').forEach(s=>s.classList.remove('active'));
+  document.querySelectorAll('.nav-item').forEach(n=>n.classList.remove('active'));
+  document.getElementById(sectionMap[key]).classList.add('active');
+  document.querySelectorAll('.nav-item').forEach(n=>{
+    if(n.textContent.trim().toLowerCase().includes(titleMap[key].toLowerCase().substring(0,5))) n.classList.add('active');
+  });
+  document.getElementById("pageTitle").textContent = titleMap[key];
+  if(key==='portfolio') loadPortfolio();
+  if(key==='watchlist') loadWatchlist();
+  if(key==='history')   loadHistory();
+  if(key==='wallet')    loadWallet(); loadPortfolioSummary();
+  if(key==='messages')  loadUserMessages();
+}
+
+// ══════════════════════════════════════════
+// LIVE PRICE
+// ══════════════════════════════════════════
+async function getLivePrice(symbol){
+  symbol = symbol.toUpperCase().trim();
+  const now = Date.now();
+  if(priceCache[symbol] && (now - priceCache[symbol].time < CACHE_TIME)) return priceCache[symbol].price;
+  try {
+    const res = await apiRequest(`/api/stock/price?symbol=${encodeURIComponent(symbol)}`);
+    if(!res || !res.ok) return 0;
+    const data = await res.json();
+    priceCache[symbol] = { price: data.lastPrice || 0, time: now };
+    return priceCache[symbol].price;
+  } catch(e){ return 0; }
+}
+
+// ══════════════════════════════════════════
+// LOAD ALL
+// ══════════════════════════════════════════
+async function loadAllData(){
+  await loadPortfolioSummary();
+}
+
+// ══════════════════════════════════════════
+// PORTFOLIO SUMMARY (for dashboard cards)
+// ══════════════════════════════════════════
+async function loadPortfolioSummary(){
+  try {
+    // Load portfolio data
+    const res = await apiRequest("/api/portfolio");
+    if(!res || !res.ok) return;
+    const data = await res.json();
+    
+    // Load wallet data for invested amount
+    const walletRes = await apiRequest("/api/wallet/details");
+    let walletInvested = 0;
+    
+    if(walletRes && walletRes.ok){
+      const wallet = await walletRes.json();
+      walletInvested = wallet.investedAmount;
+      console.log("User Wallet Data:", wallet);
+      console.log("User Wallet Invested:", walletInvested);
+    }
+    
+    // Calculate current portfolio value using live prices
+    let cur=0;
+    for(let s of data){
+      const lp = await getLivePrice(s.symbol);
+      cur += lp * s.quantity;
+    }
+    
+    // Use wallet invested amount instead of portfolio calculation
+    const pl = cur - walletInvested;
+    document.getElementById("totalInvestment").textContent = "₹"+fmt(walletInvested);
+    document.getElementById("currentValue").textContent    = "₹"+fmt(cur);
+    const plEl = document.getElementById("profitLoss");
+    plEl.textContent = (pl>=0?'+':'')+'₹'+fmt(Math.abs(pl));
+    plEl.style.color = pl>=0 ? 'var(--up)' : 'var(--down)';
+    document.getElementById("invSub").textContent = data.length + " stocks held";
+    
+    if(data.length>0){
+      loadTVChart("tvDashChart", data[0].symbol);
+      document.getElementById("chartSymLabel").textContent = "NSE:"+data[0].symbol;
+    }
+  } catch(e){ console.error(e); }
+}
+
+// ══════════════════════════════════════════
+// PORTFOLIO TABLE
+// ══════════════════════════════════════════
+async function loadPortfolio(){
+  const tbody = document.getElementById("portfolioBody");
+  tbody.innerHTML = `<tr><td colspan="8"><div class="empty"><div class="dots" style="justify-content:center;"><div class="dot" style="background:var(--accent)"></div><div class="dot" style="background:var(--accent)"></div><div class="dot" style="background:var(--accent)"></div></div></div></td></tr>`;
+  try {
+    const res = await apiRequest("/api/portfolio");
+    if(!res || !res.ok){ tbody.innerHTML=`<tr><td colspan="8"><div class="empty"><div class="empty-ico">⚠️</div><p>Failed to load portfolio</p></div></td></tr>`; return; }
+    const data = await res.json();
+    if(!data.length){ tbody.innerHTML=`<tr><td colspan="8"><div class="empty"><div class="empty-ico">�</div><p>No stocks yet — add your first stock!</p></div></td></tr>`; return; }
+    let html="";
+    for(let s of data){
+      const lp = await getLivePrice(s.symbol);
+      const invested = s.entryPrice * s.quantity;
+      const curVal   = lp * s.quantity;
+      const pl       = curVal - invested;
+      const plPct    = invested>0 ? ((pl/invested)*100).toFixed(2) : "0.00";
+      const cls      = pl>=0 ? 'up-val' : 'dn-val';
+      html+=`<tr>
+        <td class="sym-cell">📌 ${s.symbol}</td>
+        <td>${s.quantity}</td>
+        <td>₹${fmt(s.entryPrice)}</td>
+        <td>₹${fmt(lp)}</td>
+        <td>₹${fmt(curVal)}</td>
+        <td class="${cls}">${pl>=0?'+':''}₹${fmt(Math.abs(pl))}</td>
+        <td class="${cls}">${pl>=0?'+':''}${plPct}%</td>
+        <td><button class="btn-sell" onclick="openSellModal(${s.id},'${s.symbol}',${s.quantity})">Sell</button></td>
+      </tr>`;
+    }
+    tbody.innerHTML = html;
+    
+    // Also refresh wallet data to reflect any buy/sell transactions
+    try {
+      const walletRes = await apiRequest("/api/wallet/details");
+      if(walletRes && walletRes.ok){
+        const wallet = await walletRes.json();
+        document.getElementById("dashboardWalletBalance").textContent = "₹"+fmt(wallet.remainingAmount);
+      }
+    } catch(e){ console.error("Error refreshing wallet:", e); }
+  } catch(e){ tbody.innerHTML=`<tr><td colspan="8"><div class="empty"><div class="empty-ico">⚠️</div><p>Error loading portfolio</p></div></td></tr>`; }
+}
+
+// ══════════════════════════════════════════
+// ADD STOCK MODAL
+// ══════════════════════════════════════════
+function openAddStockModal(){
+  document.getElementById("addSymbol").value="";
+  document.getElementById("addQty").value="";
+  document.getElementById("addCap").value="";
+  document.getElementById("previewPrice").textContent="—";
+  document.getElementById("estInvestment").textContent="—";
+  document.getElementById("addStockModal").classList.add("open");
+  setTimeout(()=>document.getElementById("addSymbol").focus(),100);
+}
+function closeModal(id){ document.getElementById(id).classList.remove("open"); }
+function closeModalOutside(e,id){ if(e.target.id===id) closeModal(id); }
+
+async function fetchPreviewPrice(){
+  const sym = document.getElementById("addSymbol").value.trim().toUpperCase();
+  if(!sym) return;
+  document.getElementById("previewPrice").textContent="...";
+  const price = await getLivePrice(sym);
+  document.getElementById("previewPrice").textContent = price>0 ? "₹"+fmt(price) : "Not found";
+  updateEstimate();
+}
+function updateEstimate(){
+  const priceText = document.getElementById("previewPrice").textContent.replace("₹","").replace(/,/g,"");
+  const price = parseFloat(priceText);
+  const qty   = parseInt(document.getElementById("addQty").value)||0;
+  if(price>0 && qty>0) document.getElementById("estInvestment").textContent = "₹"+fmt(price*qty);
+  else document.getElementById("estInvestment").textContent = "—";
+}
+document.addEventListener("DOMContentLoaded",()=>{
+  const qtyEl = document.getElementById("addQty");
+  if(qtyEl) qtyEl.addEventListener("input", updateEstimate);
+});
+
+async function addStock(){
+  const symbol = document.getElementById("addSymbol").value.trim().toUpperCase();
+  const quantity = parseInt(document.getElementById("addQty").value);
+  const cap = parseFloat(document.getElementById("addCap").value)||undefined;
+  if(!symbol){ showToast('error','Symbol required','Please enter a stock symbol.'); return; }
+  if(!quantity||quantity<=0){ showToast('error','Invalid quantity','Please enter a valid quantity.'); return; }
+  const btn = document.getElementById("addStockSubmitBtn");
+  btn.innerHTML='<span class="dots"><span class="dot"></span><span class="dot"></span><span class="dot"></span></span>';
+  btn.disabled=true;
+  try {
+    const entryPrice = await getLivePrice(symbol);
+    if(entryPrice===0){ showToast('error','Price not found',`Could not fetch live price for ${symbol}.`); btn.innerHTML='Buy at Live Price'; btn.disabled=false; return; }
+    const body = {symbol, quantity, entryPrice};
+    if(cap) body.cap = cap;
+    const res = await apiRequest("/api/portfolio/add","POST",body);
+    if(res&&res.ok){
+      closeModal('addStockModal');
+      Swal.fire({icon:'success',title:'Stock Added!',html:`<b>${symbol}</b> × ${quantity} added at <b>₹${fmt(entryPrice)}</b>`,timer:2000,showConfirmButton:false});
+      loadPortfolio(); loadPortfolioSummary();
+    } else {
+      const err = await res?.text(); showToast('error','Failed to Add',err||'Please try again.');
+    }
+  } catch(e){ showToast('error','Error',e.message); }
+  btn.innerHTML='Buy at Live Price'; btn.disabled=false;
+}
+
+// ══════════════════════════════════════════
+// SELL MODAL
+// ══════════════════════════════════════════
+async function openSellModal(id, symbol, maxQty){
+  currentSellId = id; currentSellSym = symbol; currentSellQty = maxQty;
+  document.getElementById("sellSymLabel").textContent = symbol;
+  document.getElementById("sellMaxHint").textContent = `Max available: ${maxQty}`;
+  document.getElementById("sellQtyInput").value = "";
+  document.getElementById("sellQtyInput").max = maxQty;
+  const lp = await getLivePrice(symbol);
+  document.getElementById("sellPriceLabel").textContent = lp>0 ? "₹"+fmt(lp) : "Fetching...";
+  document.getElementById("sellModal").classList.add("open");
+  setTimeout(()=>document.getElementById("sellQtyInput").focus(),100);
+}
+
+async function confirmSell(){
+  const qty = parseInt(document.getElementById("sellQtyInput").value);
+  if(!qty||qty<=0){ showToast('error','Invalid','Enter a valid quantity.'); return; }
+  if(qty>currentSellQty){ showToast('error','Exceeds Holdings',`You only have ${currentSellQty} shares.`); return; }
+  const res = await apiRequest(`/api/portfolio/sell/${currentSellId}?quantity=${qty}`,"POST");
+  if(res&&res.ok){
+    closeModal('sellModal');
+    Swal.fire({icon:'success',title:'Sold!',html:`Sold <b>${qty}</b> shares of <b>${currentSellSym}</b>`,timer:2000,showConfirmButton:false});
+    loadPortfolio(); loadPortfolioSummary(); loadHistory();
+  } else {
+    const err = await res?.text(); showToast('error','Sell Failed',err||'Please try again.');
+  }
+}
+
+// ══════════════════════════════════════════
+// WATCHLIST
+// ══════════════════════════════════════════
+function openAddWatchlistModal(){
+  document.getElementById("watchSymbol").value="";
+  document.getElementById("addWatchlistModal").classList.add("open");
+  setTimeout(()=>document.getElementById("watchSymbol").focus(),100);
+}
+
+async function addToWatchlist(){
+  const symbol = document.getElementById("watchSymbol").value.trim().toUpperCase();
+  if(!symbol){ showToast('error','Required','Enter a stock symbol.'); return; }
+  try {
+    const res = await apiRequest("/api/watchlist/add","POST",{symbol});
+    if(res&&res.ok){
+      closeModal('addWatchlistModal');
+      Swal.fire({icon:'success',title:'Added!',text:`${symbol} added to watchlist.`,timer:1800,showConfirmButton:false});
+      loadWatchlist();
+    } else {
+      const err=await res?.text(); showToast('error','Failed',err||'Could not add to watchlist.');
+    }
+  } catch(e){ showToast('error','Error',e.message); }
+}
+
+async function loadWatchlist(){
+  const tbody=document.getElementById("watchlistBody");
+  tbody.innerHTML=`<tr><td colspan="4"><div class="empty"><p>Loading...</p></div></td></tr>`;
+  try {
+    const res=await apiRequest("/api/watchlist");
+    if(!res||!res.ok){tbody.innerHTML=`<tr><td colspan="4"><div class="empty"><div class="empty-ico">⚠️</div><p>Failed to load</p></div></td></tr>`;return;}
+    const data=await res.json();
+    if(!data.length){tbody.innerHTML=`<tr><td colspan="4"><div class="empty"><div class="empty-ico">👁</div><p>Watchlist empty — add stocks to monitor</p></div></td></tr>`;return;}
+    let html="";
+    for(let s of data){
+      const lp=await getLivePrice(s.symbol);
+      html+=`<tr><td class="sym-cell">👁 ${s.symbol}</td><td>₹${fmt(lp)}</td><td class="up-val">—</td>
+        <td><button class="btn-buy" onclick="buyFromWatchlist('${s.symbol}')">Buy</button>
+            <button class="btn-remove" onclick="removeFromWatchlist('${s.symbol}',this)" style="margin-left:6px">Remove</button></td></tr>`;
+    }
+    tbody.innerHTML=html;
+  } catch(e){ tbody.innerHTML=`<tr><td colspan="4"><div class="empty"><div class="empty-ico">⚠️</div><p>Error</p></div></td></tr>`; }
+}
+
+async function removeFromWatchlist(symbol, btn){
+  const token=localStorage.getItem("token");
+  try {
+    const res=await fetch(`${BASE_URL}/api/watchlist/remove?symbol=${encodeURIComponent(symbol)}`,{method:"DELETE",headers:{"Authorization":"Bearer "+token}});
+    if(res.ok){
+      btn.closest("tr").style.opacity="0"; btn.closest("tr").style.transition="opacity 0.3s";
+      setTimeout(()=>btn.closest("tr").remove(),300);
+    } else { showToast('error','Failed','Could not remove from watchlist.'); }
+  } catch(e){ showToast('error','Error',e.message); }
+}
+
+async function buyFromWatchlist(symbol){
+  const {value:qty} = await Swal.fire({
+    title:`Buy ${symbol}`,
+    input:'number',
+    inputLabel:'Enter quantity to buy',
+    inputPlaceholder:'e.g. 10',
+    inputAttributes:{min:1},
+    confirmButtonText:'Buy Now',
+    showCancelButton:true,
+    background:'var(--surface)', color:'var(--text)',
+    confirmButtonColor:'var(--accent)',
+    customClass:{popup:'swal2-popup',input:'swal2-input'}
+  });
+  if(!qty||qty<=0) return;
+  const lp=await getLivePrice(symbol);
+  const res=await apiRequest("/api/portfolio/add","POST",{symbol,quantity:parseInt(qty),entryPrice:lp});
+  if(res&&res.ok){
+    await fetch(`${BASE_URL}/api/watchlist/remove?symbol=${encodeURIComponent(symbol)}`,{method:"DELETE",headers:{"Authorization":"Bearer "+localStorage.getItem("token")}});
+    Swal.fire({icon:'success',title:'Purchased!',html:`<b>${symbol}</b> × ${qty} at ₹${fmt(lp)}`,timer:2000,showConfirmButton:false});
+    loadWatchlist(); loadPortfolio(); loadPortfolioSummary();
+  } else { showToast('error','Failed','Could not buy stock.'); }
+}
+
+// ══════════════════════════════════════════
+// HISTORY
+// ══════════════════════════════════════════
+async function loadHistory(){
+  const tbody=document.getElementById("historyBody");
+  tbody.innerHTML=`<tr><td colspan="7"><div class="empty"><p>Loading...</p></div></td></tr>`;
+  try {
+    const res=await apiRequest("/api/portfolio/history");
+    if(!res||!res.ok){tbody.innerHTML=`<tr><td colspan="7"><div class="empty"><div class="empty-ico">⚠️</div><p>Failed to load</p></div></td></tr>`;return;}
+    const data=await res.json();
+    if(!data||!data.length){tbody.innerHTML=`<tr><td colspan="7"><div class="empty"><div class="empty-ico">📋</div><p>No transactions yet</p></div></td></tr>`;return;}
+    let html="";
+    data.forEach(tx=>{
+      const type=tx.type;
+      const price=type==="BUY"?tx.entryPrice:tx.sellPrice;
+      const total=price?(price*tx.quantity):0;
+      const pl=type==="SELL"?tx.profitLoss:"—";
+      const date=type==="BUY"?tx.entryDate:tx.sellDate;
+      const fdate=date?new Date(date).toLocaleString('en-IN',{day:'2-digit',month:'short',year:'numeric',hour:'2-digit',minute:'2-digit'}):"-";
+      html+=`<tr>
+        <td class="sym-cell">${tx.symbol}</td>
+        <td><span class="${type==='BUY'?'type-buy':'type-sell'}">${type}</span></td>
+        <td>${tx.quantity}</td>
+        <td>₹${price?fmt(price):'0'}</td>
+        <td>₹${fmt(total)}</td>
+        <td class="${pl==='—'?'neutral':pl>=0?'up-val':'dn-val'}">${pl==='—'?'—':(pl>=0?'+':'')+'₹'+fmt(Math.abs(pl))}</td>
+        <td class="neutral" style="font-size:11px">${fdate}</td>
+      </tr>`;
+    });
+    tbody.innerHTML=html;
+  } catch(e){ tbody.innerHTML=`<tr><td colspan="7"><div class="empty"><div class="empty-ico">⚠️</div><p>Error</p></div></td></tr>`; }
+}
+
+// ══════════════════════════════════════════
+// TRADINGVIEW
+// ══════════════════════════════════════════
+function loadTVChart(containerId, symbol="RELIANCE"){
+  const el=document.getElementById(containerId);
+  if(!el)return;
+  el.innerHTML="";
+  try {
+    new TradingView.widget({container_id:containerId,symbol:"NSE:"+symbol,interval:"D",timezone:"Asia/Kolkata",theme:"dark",style:"1",locale:"en",toolbar_bg:"#0b1523",enable_publishing:false,allow_symbol_change:true,width:"100%",height:380});
+  } catch(e){ el.innerHTML=`<div class="empty" style="padding:60px"><div class="empty-ico">📈</div><p>Chart unavailable</p></div>`; }
+}
+
+// ══════════════════════════════════════════
+// API & HELPERS
+// ══════════════════════════════════════════
+async function apiRequest(endpoint, method="GET", body=null){
+  const token=localStorage.getItem("token");
+  if(!token){ window.location.href="login.html"; return null; }
+  try {
+    const res=await fetch(BASE_URL+endpoint,{method,headers:{"Content-Type":"application/json","Authorization":"Bearer "+token},body:body?JSON.stringify(body):null});
+    if(res.status===401){
+      Swal.fire({icon:'warning',title:'Session Expired',text:'Please login again.',timer:2000,showConfirmButton:false}).then(()=>{localStorage.removeItem("token");window.location.href="login.html";});
+      return null;
+    }
+    if(res.status===204) return null;
+    return res;
+  } catch(e){ showToast('error','Connection Error','Could not reach server.'); return null; }
+}
+
+function fmt(n){ return Number(n||0).toLocaleString('en-IN',{minimumFractionDigits:2,maximumFractionDigits:2}); }
+
+function showToast(icon,title,text){
+  Swal.fire({icon,title,text,background:'var(--surface)',color:'var(--text)',confirmButtonColor:'var(--accent)',customClass:{popup:'swal2-popup'}});
+}
+
+function logout(){
+  Swal.fire({icon:'question',title:'Logout?',text:'Are you sure you want to logout?',showCancelButton:true,confirmButtonText:'Yes, Logout',cancelButtonText:'Cancel',confirmButtonColor:'#ff3d5a',background:'var(--surface)',color:'var(--text)',customClass:{popup:'swal2-popup'}})
+  .then(r=>{ if(r.isConfirmed){ localStorage.removeItem("token"); window.location.href="login.html"; }});
+}
+
+// ????? WALLET FUNCTIONS ???????????????????????????
+// ????????????????????????????????????????????????????
+
+async function loadWallet(){
+  try {
+    // Load wallet details
+    const walletRes = await apiRequest("/api/wallet/details");
+    if(!walletRes || !walletRes.ok) return;
+    const wallet = await walletRes.json();
+    
+    // Update wallet cards
+    document.getElementById("walletBalance").textContent = "₹" + fmt(wallet.remainingAmount);
+    document.getElementById("walletInvested").textContent = "₹" + fmt(wallet.investedAmount);
+    const total = wallet.remainingAmount + wallet.investedAmount;
+    document.getElementById("walletTotal").textContent = "₹" + fmt(total);
+    
+    // Load transactions
+    await loadWalletTransactions();
+  } catch(e){ 
+    console.error("Error loading wallet:", e);
+    showToast('error','Wallet Error','Could not load wallet data.');
+  }
+}
+
+async function loadWalletTransactions(){
+  const tbody = document.getElementById("walletTransactionsBody");
+  tbody.innerHTML = `<tr><td colspan="4"><div class="empty"><div class="dots" style="justify-content:center;"><div class="dot" style="background:var(--accent)"></div><div class="dot" style="background:var(--accent)"></div><div class="dot" style="background:var(--accent)"></div></div></div></td></tr>`;
+  
+  try {
+    const res = await apiRequest("/api/wallet/transactions");
+    if(!res || !res.ok){
+      tbody.innerHTML = `<tr><td colspan="4"><div class="empty"><div class="empty-ico">💸</div><p>Failed to load transactions</p></div></td></tr>`;
+      return;
+    }
+    
+    const transactions = await res.json();
+    if(!transactions || transactions.length === 0){
+      tbody.innerHTML = `<tr><td colspan="4"><div class="empty"><div class="empty-ico">💸</div><p>No transactions yet</p></div></td></tr>`;
+      return;
+    }
+    
+    let html = "";
+    transactions.forEach(tx => {
+      const typeClass = tx.type === 'ADD' ? 'type-buy' : tx.type === 'WITHDRAW' ? 'type-sell' : 'type-buy';
+      const date = new Date(tx.dateTime).toLocaleString('en-IN',{
+        day:'2-digit', month:'short', year:'numeric', 
+        hour:'2-digit', minute:'2-digit'
+      });
+      
+      html += `<tr>
+        <td class="sym-cell">#${tx.id}</td>
+        <td><span class="${typeClass}">${tx.type}</span></td>
+        <td class="${tx.type === 'ADD' ? 'up-val' : tx.type === 'WITHDRAW' ? 'dn-val' : 'neutral'}">
+          ${tx.type === 'ADD' ? '+' : tx.type === 'WITHDRAW' ? '-' : ''}₹${fmt(Math.abs(tx.amount))}
+        </td>
+        <td class="neutral" style="font-size:11px">${date}</td>
+      </tr>`;
+    });
+    
+    tbody.innerHTML = html;
+  } catch(e){
+    tbody.innerHTML = `<tr><td colspan="4"><div class="empty"><div class="empty-ico">💸</div><p>Error loading transactions</p></div></td></tr>`;
+  }
+}
+
+// ????? WALLET MODAL FUNCTIONS ???????????????????????????
+
+function openAddFundsModal(){
+  document.getElementById("addFundsAmount").value = "";
+  document.getElementById("addFundsModal").classList.add("open");
+  setTimeout(()=>document.getElementById("addFundsAmount").focus(),100);
+}
+
+async function openInvestModal(){
+  // Load current wallet data for modal
+  try {
+    const res = await apiRequest("/api/wallet/details");
+    if(!res || !res.ok) return;
+    const wallet = await res.json();
+    
+    document.getElementById("availableBalanceLabel").textContent = "₹" + fmt(wallet.remainingAmount);
+    document.getElementById("currentInvestmentLabel").textContent = "₹" + fmt(wallet.investedAmount);
+    document.getElementById("investMaxHint").textContent = `Maximum available: ₹${fmt(wallet.remainingAmount)}`;
+    document.getElementById("investAmount").max = wallet.remainingAmount;
+    document.getElementById("investAmount").value = "";
+    
+    document.getElementById("investModal").classList.add("open");
+    setTimeout(()=>document.getElementById("investAmount").focus(),100);
+  } catch(e){
+    showToast('error','Error','Could not load wallet data.');
+  }
+}
+
+async function openWithdrawModal(){
+  // Load current wallet data for modal
+  try {
+    const res = await apiRequest("/api/wallet/details");
+    if(!res || !res.ok) return;
+    const wallet = await res.json();
+    
+    document.getElementById("withdrawBalanceLabel").textContent = "₹" + fmt(wallet.remainingAmount);
+    document.getElementById("withdrawableLabel").textContent = "₹" + fmt(wallet.remainingAmount);
+    document.getElementById("withdrawMaxHint").textContent = `Maximum withdrawable: ₹${fmt(wallet.remainingAmount)}`;
+    document.getElementById("withdrawAmount").max = wallet.remainingAmount;
+    document.getElementById("withdrawAmount").value = "";
+    
+    document.getElementById("withdrawModal").classList.add("open");
+    setTimeout(()=>document.getElementById("withdrawAmount").focus(),100);
+  } catch(e){
+    showToast('error','Error','Could not load wallet data.');
+  }
+}
+
+// ????? WALLET ACTION FUNCTIONS ???????????????????????????
+
+async function confirmAddFunds(){
+  const amount = parseFloat(document.getElementById("addFundsAmount").value);
+  if(!amount || amount <= 0){
+    showToast('error','Invalid Amount','Please enter a valid amount.');
+    return;
+  }
+  
+  try {
+    const res = await apiRequest(`/api/wallet/add?amount=${amount}`, "POST");
+    if(res && res.ok){
+      closeModal('addFundsModal');
+      Swal.fire({
+        icon:'success', 
+        title:'Funds Added!', 
+        html:`<b>?</b>${fmt(amount)} added to your wallet`,
+        timer:2000, 
+        showConfirmButton:false
+      });
+      loadWallet(); loadPortfolioSummary();
+    } else {
+      const err = await res?.text();
+      showToast('error','Failed to Add', err || 'Please try again.');
+    }
+  } catch(e){
+    showToast('error','Error', e.message);
+  }
+}
+
+async function confirmInvest(){
+  const amount = parseFloat(document.getElementById("investAmount").value);
+  if(!amount || amount <= 0){
+    showToast('error','Invalid Amount','Please enter a valid amount.');
+    return;
+  }
+  
+  try {
+    const res = await apiRequest(`/api/wallet/invest?amount=${amount}`, "POST");
+    if(res && res.ok){
+      closeModal('investModal');
+      Swal.fire({
+        icon:'success', 
+        title:'Investment Made!', 
+        html:`<b>?</b>${fmt(amount)} invested`,
+        timer:2000, 
+        showConfirmButton:false
+      });
+      loadWallet(); loadPortfolioSummary();
+    } else {
+      const err = await res?.text();
+      showToast('error','Investment Failed', err || 'Insufficient balance or error occurred.');
+    }
+  } catch(e){
+    showToast('error','Error', e.message);
+  }
+}
+
+async function confirmWithdraw(){
+  const amount = parseFloat(document.getElementById("withdrawAmount").value);
+  if(!amount || amount <= 0){
+    showToast('error','Invalid Amount','Please enter a valid amount.');
+    return;
+  }
+  
+  try {
+    const res = await apiRequest(`/api/wallet/withdraw?amount=${amount}`, "POST");
+    if(res && res.ok){
+      closeModal('withdrawModal');
+      Swal.fire({
+        icon:'success', 
+        title:'Withdrawal Complete!', 
+        html:`<b>?</b>${fmt(amount)} withdrawn`,
+        timer:2000, 
+        showConfirmButton:false
+      });
+      loadWallet(); loadPortfolioSummary();
+    } else {
+      const err = await res?.text();
+      showToast('error','Withdrawal Failed', err || 'Insufficient balance or error occurred.');
+    }
+  } catch(e){
+    showToast('error','Error', e.message);
+  }
+}
+
+// ????????????????????????????????????????????????????
+// USER MESSAGING FUNCTIONS
+// ????????????????????????????????????????????????????
+
+// Load user messages
+async function loadUserMessages() {
+  try {
+    // Try to get messages without userId parameter first
+    // Backend should extract user from JWT token
+    const res = await apiRequest("/api/admin-message/user");
+    if (!res || !res.ok) {
+      displayMessageError("Failed to load messages");
+      return;
+    }
+    
+    const messages = await res.json();
+    
+    if (!messages || messages.length === 0) {
+      displayEmptyMessages();
+      return;
+    }
+    
+    // Sort messages by date (newest first)
+    messages.sort((a, b) => new Date(b.dateTime) - new Date(a.dateTime));
+    
+    displayRecentMessages(messages.slice(0, 5)); // Show last 5 messages as recent
+    displayAllMessages(messages); // Show all messages in all tab
+    
+    updateUnreadCount(messages);
+  } catch(e) {
+    console.error("Error loading messages:", e);
+    displayMessageError("Error loading messages");
+  }
+}
+
+// Display recent messages
+function displayRecentMessages(messages) {
+  const recentContainer = document.getElementById("recentMessages");
+  
+  if (messages.length === 0) {
+    recentContainer.innerHTML = `
+      <div class="empty-state">
+        <div class="empty-ico">📨</div>
+        <p>No recent messages</p>
+      </div>
+    `;
+    return;
+  }
+  
+  let html = "";
+  messages.forEach(msg => {
+    html += createMessageHTML(msg, true);
+  });
+  
+  recentContainer.innerHTML = html;
+}
+
+// Display all messages
+function displayAllMessages(messages) {
+  const allContainer = document.getElementById("allMessages");
+  
+  if (messages.length === 0) {
+    allContainer.innerHTML = `
+      <div class="empty-state">
+        <div class="empty-ico">📨</div>
+        <p>No messages</p>
+      </div>
+    `;
+    return;
+  }
+  
+  let html = "";
+  messages.forEach(msg => {
+    html += createMessageHTML(msg, false);
+  });
+  
+  allContainer.innerHTML = html;
+}
+
+// Create message HTML
+function createMessageHTML(msg, isRecent) {
+  const date = new Date(msg.dateTime).toLocaleString('en-IN', {
+    day: '2-digit',
+    month: 'short',
+    year: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit'
+  });
+  
+  const isNew = isRecent && isMessageNew(msg.dateTime);
+  
+  return `
+    <div class="message-item ${isNew ? 'message-new' : ''}">
+      <div class="message-header">
+        <div class="message-from">From: Admin</div>
+        <div class="message-date">${date}</div>
+      </div>
+      <div class="message-content">
+        <div class="message-text">${msg.message}</div>
+        ${isNew ? '<div class="message-badge">New</div>' : ''}
+      </div>
+    </div>
+  `;
+}
+
+// Check if message is new (less than 24 hours old)
+function isMessageNew(messageDateTime) {
+  const messageDate = new Date(messageDateTime);
+  const now = new Date();
+  const hoursDiff = (now - messageDate) / (1000 * 60 * 60);
+  return hoursDiff < 24;
+}
+
+// Update unread count
+function updateUnreadCount(messages) {
+  const newMessages = messages.filter(msg => isMessageNew(msg.dateTime));
+  const unreadCount = newMessages.length;
+  
+  const badge = document.getElementById("unreadBadge");
+  const countSpan = document.getElementById("unreadCount");
+  
+  if (unreadCount > 0) {
+    badge.style.display = "flex";
+    countSpan.textContent = unreadCount;
+  } else {
+    badge.style.display = "none";
+  }
+}
+
+document.addEventListener('DOMContentLoaded', function() {
+  const msgContent = document.getElementById("msgContent");
+  
+  if (msgContent) {
+    msgContent.addEventListener('input', updateCharCount);
+  }
+});
+
+// Display empty messages state
+function displayEmptyMessages() {
+  const emptyHTML = `
+    <div class="empty-state">
+      <div class="empty-ico">📨</div>
+      <p>No messages from admin</p>
+      <p class="empty-sub">Check back later for updates</p>
+    </div>
+  `;
+  
+  document.getElementById("recentMessages").innerHTML = emptyHTML;
+  document.getElementById("allMessages").innerHTML = emptyHTML;
+  document.getElementById("unreadBadge").style.display = "none";
+}
+
+// Display message error
+function displayMessageError(error) {
+  const errorHTML = `
+    <div class="empty-state">
+      <div class="empty-ico">📨</div>
+      <p>${error}</p>
+      <button class="btn btn-retry" onclick="loadUserMessages()">Retry</button>
+    </div>
+  `;
+  
+  document.getElementById("recentMessages").innerHTML = errorHTML;
+  document.getElementById("allMessages").innerHTML = errorHTML;
+}
+
+// Show messages tab
+function showMessagesTab(tab) {
+  const recentBtn = document.querySelector('.tab-btn:nth-child(1)');
+  const allBtn = document.querySelector('.tab-btn:nth-child(2)');
+  const recentContainer = document.getElementById("recentMessages");
+  const allContainer = document.getElementById("allMessages");
+  
+  if (tab === 'recent') {
+    recentBtn.classList.add('active');
+    allBtn.classList.remove('active');
+    recentContainer.style.display = 'block';
+    allContainer.style.display = 'none';
+  } else {
+    recentBtn.classList.remove('active');
+    allBtn.classList.add('active');
+    recentContainer.style.display = 'none';
+    allContainer.style.display = 'block';
+  }
+}
+
+// Mark messages as read (when user views them)
+function markMessagesAsRead() {
+  // This would typically call an API to mark messages as read
+  // For now, we'll just hide the unread badge
+  const badge = document.getElementById("unreadBadge");
+  badge.style.display = "none";
+}
+
+// Watchlist auto-refresh
+setInterval(()=>{ if(document.getElementById("secWatchlist").classList.contains("active")) loadWatchlist(); }, 10000);
+
+// Messages auto-refresh every 30 seconds
+setInterval(()=>{ 
+  if(document.getElementById("secMessages").classList.contains("active")) {
+    loadUserMessages(); 
+  } 
+}, 30000);
+
+// Mark messages as read when messages section is shown
+const originalShowSection = showSection;
+showSection = function(key) {
+  originalShowSection.call(this, key);
+  
+  if (key === 'messages') {
+    // Mark as read after a short delay to allow user to see new messages first
+    setTimeout(markMessagesAsRead, 2000);
+  }
+};
+
+// ==================== CHATBOT FUNCTIONS ====================
+const CHATBOT_URL = "http://localhost:5000";
+
+function toggleChatbot() {
+  const panel = document.getElementById('chatbotPanel');
+  const btn = document.getElementById('aiChatBtn');
+  
+  if (panel.classList.contains('open')) {
+    panel.classList.remove('open');
+    btn.style.background = 'linear-gradient(135deg,var(--accent),var(--blue))';
+  } else {
+    panel.classList.add('open');
+    btn.style.background = 'linear-gradient(135deg,var(--blue),var(--accent))';
+    // Focus input when opened
+    setTimeout(() => {
+      document.getElementById('chatInput').focus();
+    }, 300);
+  }
+}
+
+function autoResizeTextarea(textarea) {
+  textarea.style.height = 'auto';
+  textarea.style.height = Math.min(textarea.scrollHeight, 100) + 'px';
+}
+
+function handleChatKeyPress(event) {
+  if (event.key === 'Enter' && !event.shiftKey) {
+    event.preventDefault();
+    sendMessage();
+  }
+}
+
+async function sendMessage() {
+  const input = document.getElementById('chatInput');
+  const message = input.value.trim();
+  
+  if (!message) return;
+  
+  // Disable send button
+  const sendBtn = document.getElementById('chatSendBtn');
+  sendBtn.disabled = true;
+  
+  // Add user message
+  addMessage(message, 'user');
+  
+  // Clear input
+  input.value = '';
+  input.style.height = 'auto';
+  
+  // Show typing indicator
+  showTypingIndicator();
+  
+  try {
+    const response = await fetch(`${CHATBOT_URL}/chat`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ message: message })
+    });
+    
+    const data = await response.json();
+    
+    // Remove typing indicator
+    removeTypingIndicator();
+    
+    if (response.ok && data.response) {
+      addMessage(data.response, 'ai');
+    } else {
+      addMessage('Sorry, I encountered an error. Please try again.', 'ai');
+    }
+  } catch (error) {
+    console.error('Chatbot error:', error);
+    removeTypingIndicator();
+    
+    // Provide mock response when backend is unavailable
+    const mockResponse = generateMockResponse(message.toLowerCase());
+    addMessage(mockResponse, 'ai');
+  }
+  
+  // Re-enable send button
+  sendBtn.disabled = false;
+}
+
+function generateMockResponse(message) {
+  if (message.includes('strategy') || message.includes('investment')) {
+    return `### Investment Strategy Recommendations
+    
+Based on your portfolio profile, here are **three strategic frameworks** to consider:
+
+## The Core-Satellite Strategy (Balanced Growth)
+### The Core (70-80%)
+- Large-cap blue-chip stocks (RELIANCE, TCS, HDFC)
+- Index funds for market stability
+- Government bonds for risk management
+
+### The Satellite (20-30%)
+- Mid-cap growth opportunities
+- Sector-specific ETFs
+- Emerging market exposure
+
+**Best for:** Long-term investors seeking balanced growth
+
+## Aggressive Growth Strategy
+- Focus on high-growth sectors
+- 60% equities, 40% alternatives
+- Regular rebalancing required
+
+## Conservative Income Strategy
+- 70% debt instruments
+- 30% dividend-paying stocks
+- Capital preservation priority
+
+[WARNING] Always consider your risk tolerance and investment horizon before implementing any strategy.
+
+Would you like me to elaborate on any of these strategies?`;
+  }
+  
+  if (message.includes('risk') || message.includes('portfolio')) {
+    return `### Portfolio Risk Analysis
+
+## Current Risk Assessment
+Your portfolio shows **moderate risk levels** with the following characteristics:
+
+### Risk Factors Identified
+- Concentration risk: Top 3 holdings represent 45% of portfolio
+- Sector imbalance: Heavy allocation to technology sector
+- Market timing risk: Recent large-cap purchases
+
+### Recommendations
+- Diversify across sectors (banking, pharma, consumer goods)
+- Consider adding international exposure
+- Implement systematic investment plan (SIP)
+
+[INFO] Risk score: 6/10 (Moderate)
+Would you like specific stock recommendations to balance your portfolio?`;
+  }
+  
+  if (message.includes('market') || message.includes('trend')) {
+    return `### Current Market Trends
+
+## Market Overview
+The market is showing **mixed signals** with sector rotation in progress:
+
+### Performing Sectors
+- **Banking**: Strong Q4 results, rate cut expectations
+- **Pharma**: Defensive play, monsoon season demand
+- **IT**: Stable outlook, deal pipeline improvement
+
+### Underperforming Sectors
+- Metals: China slowdown concerns
+- Auto: High valuation concerns
+- Real Estate: Interest rate sensitivity
+
+### Key Indicators
+- NIFTY P/E: 22.5 (Slightly above historical average)
+- VIX: 14.2 (Moderate volatility)
+- FII flows: Positive for 3 consecutive weeks
+
+[WARNING] Geopolitical tensions could impact market sentiment. Consider defensive positioning.
+
+Would you like sector-specific stock recommendations?`;
+  }
+  
+  return `I understand you're asking about "${message}". 
+
+### How I Can Help
+I can provide insights on:
+- **Investment strategies** tailored to your goals
+- **Portfolio analysis** and risk assessment  
+- **Market trends** and sector opportunities
+- **Stock recommendations** based on fundamentals
+
+Please ask me specific questions about any of these areas, or try:
+- "Suggest investment strategy"
+- "Analyze portfolio risk" 
+- "Current market trends"
+- "Best stocks to buy now"
+
+[INFO] I use advanced AI to provide personalized financial guidance based on your portfolio data.`;
+}
+
+function addMessage(text, sender) {
+  const messagesContainer = document.getElementById('chatMessages');
+  const messageDiv = document.createElement('div');
+  messageDiv.className = `message ${sender}`;
+  
+  const time = new Date().toLocaleTimeString('en-IN', {
+    hour: '2-digit',
+    minute: '2-digit'
+  });
+  
+  let formattedContent = text;
+  if (sender === 'ai') {
+    formattedContent = formatAIResponse(text);
+  }
+  
+  messageDiv.innerHTML = `
+    <div class="${sender === 'ai' ? 'ai-message-content' : ''}">
+      ${formattedContent}
+    </div>
+    <div class="message-time">${time}</div>
+  `;
+  
+  messagesContainer.appendChild(messageDiv);
+  messagesContainer.scrollTop = messagesContainer.scrollHeight;
+}
+
+function formatAIResponse(text) {
+  // Convert markdown-like syntax to HTML structure
+  let formatted = text;
+  
+  // Convert ### headers to topics
+  formatted = formatted.replace(/###\s*([^\n\r]+)/g, '<div class="ai-topic">$1</div>');
+  
+  // Convert ## headers to subtopics
+  formatted = formatted.replace(/##\s*([^\n\r]+)/g, '<div class="ai-subtopic">$1</div>');
+  
+  // Convert **bold** to highlighted text
+  formatted = formatted.replace(/\*\*([^*]+)\*\*/g, '<span class="ai-bold">$1</span>');
+  
+  // Convert bullet points (lines starting with - or *)
+  formatted = formatted.replace(/^[-*]\s+(.+)$/gm, '<li>$1</li>');
+  
+  // Wrap consecutive <li> elements in <ul>
+  formatted = formatted.replace(/(<li>.*?<\/li>)(\s*<li>.*?<\/li>)*/g, function(match) {
+    return '<ul>' + match + '</ul>';
+  });
+  
+  // Convert [INFO] boxes
+  formatted = formatted.replace(/\[INFO\]\s*([^\n\r]+)/g, '<div class="ai-info-box">📋 $1</div>');
+  
+  // Convert [WARNING] boxes
+  formatted = formatted.replace(/\[WARNING\]\s*([^\n\r]+)/g, '<div class="ai-warning-box">⚠️ $1</div>');
+  
+  // Convert line breaks to proper spacing
+  formatted = formatted.replace(/\n\n/g, '</p><p>');
+  formatted = '<p>' + formatted + '</p>';
+  
+  // Clean up empty paragraphs
+  formatted = formatted.replace(/<p><\/p>/g, '');
+  formatted = formatted.replace(/<p>(<div)/g, '$1');
+  formatted = formatted.replace(/(<\/div>)<\/p>/g, '$1');
+  
+  return formatted;
+}
+
+function showTypingIndicator() {
+  const messagesContainer = document.getElementById('chatMessages');
+  const typingDiv = document.createElement('div');
+  typingDiv.className = 'typing-indicator';
+  typingDiv.id = 'typingIndicator';
+  
+  typingDiv.innerHTML = `
+    <div class="typing-dot"></div>
+    <div class="typing-dot"></div>
+    <div class="typing-dot"></div>
+  `;
+  
+  messagesContainer.appendChild(typingDiv);
+  messagesContainer.scrollTop = messagesContainer.scrollHeight;
+}
+
+function removeTypingIndicator() {
+  const typingIndicator = document.getElementById('typingIndicator');
+  if (typingIndicator) {
+    typingIndicator.remove();
+  }
+}
+
+// Check chatbot server health on page load
+window.addEventListener('load', async () => {
+  try {
+    const response = await fetch(`${CHATBOT_URL}/health`);
+    if (!response.ok) {
+      console.warn('Chatbot server is not running on localhost:5000');
+    }
+  } catch (error) {
+    console.warn('Could not connect to chatbot server on localhost:5000');
+  }
+});
+
+</script>
+</body>
+</html>

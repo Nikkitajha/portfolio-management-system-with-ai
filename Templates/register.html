@@ -1,0 +1,297 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>PMS — Create Account</title>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600;700&family=Manrope:wght@400;600;700;800&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+<style>
+:root {
+  --bg:#050b14; --surface:#0b1523; --surface2:#0f1e30;
+  --border:#162234; --border2:#1e3048;
+  --accent:#00e5b0; --accent-dim:rgba(0,229,176,0.08); --accent-glow:rgba(0,229,176,0.25);
+  --blue:#2979ff; --orange:#ff6b2b;
+  --up:#00e5b0; --down:#ff3d5a;
+  --text:#ddeeff; --muted:#4a6d8c; --muted2:#6b8fad;
+  --mono:'JetBrains Mono',monospace; --sans:'Manrope',sans-serif;
+}
+*{margin:0;padding:0;box-sizing:border-box;}
+body{font-family:var(--sans);background:var(--bg);color:var(--text);min-height:100vh;display:flex;overflow:hidden;}
+body::before{content:'';position:fixed;inset:0;background-image:linear-gradient(rgba(0,229,176,0.025) 1px,transparent 1px),linear-gradient(90deg,rgba(0,229,176,0.025) 1px,transparent 1px);background-size:48px 48px;pointer-events:none;z-index:0;}
+.glow1{position:fixed;width:500px;height:500px;border-radius:50%;background:radial-gradient(circle,rgba(0,229,176,0.1),transparent 70%);top:-150px;right:400px;pointer-events:none;z-index:0;}
+.glow2{position:fixed;width:350px;height:350px;border-radius:50%;background:radial-gradient(circle,rgba(41,121,255,0.1),transparent 70%);bottom:-100px;left:200px;pointer-events:none;z-index:0;}
+
+/* TICKER */
+.ticker-bar{position:fixed;top:0;left:0;right:0;z-index:100;background:rgba(11,21,35,0.95);border-bottom:1px solid var(--border);padding:7px 0;overflow:hidden;}
+.ticker-track{display:flex;gap:36px;animation:ticker 30s linear infinite;white-space:nowrap;}
+@keyframes ticker{0%{transform:translateX(0)}100%{transform:translateX(-50%)}}
+.tick{font-family:var(--mono);font-size:11px;display:flex;gap:8px;align-items:center;}
+.tick-sym{color:var(--text);font-weight:700;} .tick-price{color:var(--muted2);}
+.tick-up{color:var(--up);} .tick-dn{color:var(--down);} .tick-sep{color:var(--border2);}
+
+/* LEFT */
+.left{flex:1;display:flex;flex-direction:column;justify-content:center;padding:60px;padding-top:80px;position:relative;z-index:1;}
+.logo-row{display:flex;align-items:center;gap:14px;margin-bottom:50px;}
+.logo-box{width:46px;height:46px;background:linear-gradient(135deg,var(--accent),#00b894);border-radius:12px;display:flex;align-items:center;justify-content:center;font-family:var(--mono);font-weight:700;font-size:18px;color:#000;box-shadow:0 0 24px var(--accent-glow);}
+.logo-text h1{font-size:22px;font-weight:800;letter-spacing:-0.5px;}
+.logo-text p{font-family:var(--mono);font-size:11px;color:var(--muted);margin-top:2px;}
+
+.hero h2{font-size:46px;font-weight:800;line-height:1.12;letter-spacing:-2px;margin-bottom:18px;}
+.hero h2 em{font-style:normal;color:var(--accent);}
+.hero p{font-size:15px;color:var(--muted2);line-height:1.7;max-width:400px;margin-bottom:40px;}
+
+.feature-list{display:flex;flex-direction:column;gap:14px;}
+.feature{display:flex;align-items:flex-start;gap:12px;}
+.feat-icon{width:32px;height:32px;border-radius:8px;background:var(--accent-dim);border:1px solid rgba(0,229,176,0.15);display:flex;align-items:center;justify-content:center;font-size:14px;flex-shrink:0;margin-top:1px;}
+.feat-text h4{font-size:13px;font-weight:700;margin-bottom:2px;}
+.feat-text p{font-size:12px;color:var(--muted2);}
+
+/* RIGHT */
+.right{width:480px;min-height:100vh;background:var(--surface);border-left:1px solid var(--border);display:flex;flex-direction:column;justify-content:center;padding:50px 44px;padding-top:80px;position:relative;z-index:1;overflow-y:auto;}
+.right::before{content:'';position:absolute;top:0;left:0;right:0;height:2px;background:linear-gradient(90deg,var(--accent),var(--blue));}
+
+.form-head{margin-bottom:28px;}
+.form-head h3{font-size:26px;font-weight:800;letter-spacing:-0.5px;margin-bottom:6px;}
+.form-head p{font-family:var(--mono);font-size:11px;color:var(--muted);}
+
+/* Progress */
+.progress-bar{height:3px;background:var(--border2);border-radius:2px;margin-bottom:26px;overflow:hidden;}
+.progress-fill{height:100%;background:linear-gradient(90deg,var(--accent),var(--blue));border-radius:2px;width:0%;transition:width 0.4s ease;}
+
+/* Field grid */
+.field-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;}
+.field{margin-bottom:14px;}
+.field.full{grid-column:1/-1;}
+.field label{display:block;font-family:var(--mono);font-size:10px;text-transform:uppercase;letter-spacing:1.2px;color:var(--muted);margin-bottom:7px;}
+.field-wrap{position:relative;}
+.field-ico{position:absolute;left:13px;top:50%;transform:translateY(-50%);font-size:14px;pointer-events:none;color:var(--muted);transition:color 0.3s;}
+.field input{width:100%;padding:12px 12px 12px 40px;background:var(--surface2);border:1px solid var(--border2);border-radius:8px;color:var(--text);font-size:13px;font-family:var(--mono);outline:none;transition:all 0.3s;}
+.field input:focus{border-color:var(--accent);background:var(--accent-dim);box-shadow:0 0 0 3px rgba(0,229,176,0.06);}
+.field input::placeholder{color:var(--muted);opacity:0.5;}
+.field input.error{border-color:var(--down);}
+.field-err{font-family:var(--mono);font-size:10px;color:var(--down);margin-top:5px;display:none;}
+
+/* Password strength */
+.strength-row{display:flex;gap:4px;margin-top:7px;}
+.strength-seg{flex:1;height:3px;border-radius:2px;background:var(--border2);transition:all 0.3s;}
+.strength-label{font-family:var(--mono);font-size:10px;color:var(--muted);margin-top:4px;text-align:right;}
+
+/* Btn */
+.btn-main{width:100%;padding:14px;margin-top:10px;background:linear-gradient(135deg,var(--accent) 0%,#00c896 100%);border:none;border-radius:8px;color:#000;font-size:14px;font-weight:800;font-family:var(--sans);cursor:pointer;letter-spacing:0.3px;transition:all 0.3s;position:relative;overflow:hidden;}
+.btn-main:hover{transform:translateY(-1px);box-shadow:0 8px 28px rgba(0,229,176,0.3);}
+.btn-main:active{transform:translateY(0);}
+.btn-main.loading{pointer-events:none;opacity:0.8;}
+.dots{display:inline-flex;gap:4px;align-items:center;}
+.dot{width:6px;height:6px;background:#000;border-radius:50%;animation:dotB 1s ease-in-out infinite;}
+.dot:nth-child(2){animation-delay:0.15s} .dot:nth-child(3){animation-delay:0.3s}
+@keyframes dotB{0%,80%,100%{transform:scale(0.7);opacity:0.5}40%{transform:scale(1);opacity:1}}
+
+.terms{font-size:11px;color:var(--muted);text-align:center;margin-top:14px;font-family:var(--mono);}
+.terms a{color:var(--accent);text-decoration:none;}
+
+.bottom-link{text-align:center;margin-top:18px;font-size:13px;color:var(--muted);}
+.bottom-link a{color:var(--accent);text-decoration:none;font-weight:700;font-family:var(--mono);}
+.bottom-link a:hover{text-decoration:underline;}
+
+/* SweetAlert custom */
+.swal2-popup{background:var(--surface)!important;border:1px solid var(--border2)!important;color:var(--text)!important;font-family:var(--sans)!important;border-radius:14px!important;}
+.swal2-title{color:var(--text)!important;font-family:var(--sans)!important;}
+.swal2-html-container{color:var(--muted2)!important;font-family:var(--mono)!important;font-size:13px!important;}
+.swal2-confirm{background:var(--accent)!important;color:#000!important;font-weight:700!important;border-radius:8px!important;}
+.swal2-cancel{background:var(--surface2)!important;border:1px solid var(--border2)!important;color:var(--text)!important;border-radius:8px!important;}
+</style>
+</head>
+<body>
+<div class="glow1"></div>
+<div class="glow2"></div>
+
+<div class="ticker-bar"><div class="ticker-track" id="tickerTrack"></div></div>
+
+<!-- LEFT -->
+<div class="left">
+  <div class="logo-row">
+    <div class="logo-box">P</div>
+    <div class="logo-text"><h1>PMS</h1><p>// PORTFOLIO_MANAGEMENT_SYSTEM</p></div>
+  </div>
+  <div class="hero">
+    <h2>Start Your<br><em>Investment</em><br>Journey.</h2>
+    <p>Join thousands of investors tracking their portfolio in real-time with live NSE/BSE market data.</p>
+  </div>
+  <div class="feature-list">
+    <div class="feature">
+      <div class="feat-icon">📈</div>
+      <div class="feat-text"><h4>Live Market Data</h4><p>Real-time NSE/BSE prices for your holdings</p></div>
+    </div>
+    <div class="feature">
+      <div class="feat-icon">💼</div>
+      <div class="feat-text"><h4>Portfolio Tracking</h4><p>Monitor P&L, ROI, and performance charts</p></div>
+    </div>
+    <div class="feature">
+      <div class="feat-icon">🔔</div>
+      <div class="feat-text"><h4>Smart Watchlist</h4><p>Track stocks you're interested in with alerts</p></div>
+    </div>
+    <div class="feature">
+      <div class="feat-icon">🔐</div>
+      <div class="feat-text"><h4>OTP Secured</h4><p>Two-factor authentication for every login</p></div>
+    </div>
+  </div>
+</div>
+
+<!-- RIGHT -->
+<div class="right">
+  <div class="form-head">
+    <h3>Create Account</h3>
+    <p>// NEW_USER_REGISTRATION</p>
+  </div>
+
+  <div class="progress-bar"><div class="progress-fill" id="progressFill"></div></div>
+
+  <div class="field-grid">
+    <div class="field">
+      <label>Username</label>
+      <div class="field-wrap">
+        <span class="field-ico">👤</span>
+        <input type="text" id="username" placeholder="trader123" oninput="updateProgress()">
+      </div>
+      <div class="field-err" id="err-username">Required</div>
+    </div>
+    <div class="field">
+      <label>Phone</label>
+      <div class="field-wrap">
+        <span class="field-ico">📱</span>
+        <input type="tel" id="phone" placeholder="9876543210" oninput="updateProgress()">
+      </div>
+      <div class="field-err" id="err-phone">Required</div>
+    </div>
+    <div class="field full">
+      <label>Email Address</label>
+      <div class="field-wrap">
+        <span class="field-ico">✉</span>
+        <input type="email" id="email" placeholder="you@example.com" oninput="updateProgress()">
+      </div>
+      <div class="field-err" id="err-email">Valid email required</div>
+    </div>
+    <div class="field">
+      <label>Password</label>
+      <div class="field-wrap">
+        <span class="field-ico">🔒</span>
+        <input type="password" id="password" placeholder="••••••••" oninput="checkStrength();updateProgress()">
+      </div>
+      <div class="strength-row" id="strengthRow">
+        <div class="strength-seg" id="s1"></div>
+        <div class="strength-seg" id="s2"></div>
+        <div class="strength-seg" id="s3"></div>
+        <div class="strength-seg" id="s4"></div>
+      </div>
+      <div class="strength-label" id="strengthLabel"></div>
+    </div>
+    <div class="field">
+      <label>Confirm Password</label>
+      <div class="field-wrap">
+        <span class="field-ico">🔒</span>
+        <input type="password" id="confirmPassword" placeholder="••••••••" oninput="updateProgress()">
+      </div>
+      <div class="field-err" id="err-confirm">Passwords don't match</div>
+    </div>
+  </div>
+
+  <button class="btn-main" id="regBtn" onclick="handleRegister()">Create Account →</button>
+
+  <p class="terms">By registering you agree to our <a href="#">Terms</a> &amp; <a href="#">Privacy Policy</a></p>
+
+  <div class="bottom-link">Already have an account? <a href="login.html">Sign In</a></div>
+</div>
+
+<script>
+const BASE_URL = "http://localhost:8080";
+
+// Ticker
+const stocks=[{sym:"RELIANCE",price:"2,945.30",chg:"+1.24%",up:true},{sym:"TCS",price:"3,812.50",chg:"-0.38%",up:false},{sym:"INFY",price:"1,543.75",chg:"+2.10%",up:true},{sym:"HDFC",price:"1,672.40",chg:"+0.87%",up:true},{sym:"WIPRO",price:"462.15",chg:"-1.05%",up:false},{sym:"BAJFINANCE",price:"6,890.00",chg:"+3.12%",up:true},{sym:"SBIN",price:"780.60",chg:"-0.22%",up:false},{sym:"ICICIBANK",price:"1,145.85",chg:"+1.55%",up:true},{sym:"MARUTI",price:"11,240.00",chg:"+0.64%",up:true},{sym:"TATASTEEL",price:"168.30",chg:"-2.10%",up:false}];
+const track=document.getElementById("tickerTrack");
+[...stocks,...stocks].forEach(s=>{const el=document.createElement("span");el.className="tick";el.innerHTML=`<span class="tick-sym">${s.sym}</span><span class="tick-price">${s.price}</span><span class="${s.up?'tick-up':'tick-dn'}">${s.chg}</span><span class="tick-sep">|</span>`;track.appendChild(el);});
+
+// Progress
+function updateProgress(){
+  const fields=['username','phone','email','password','confirmPassword'];
+  const filled=fields.filter(id=>document.getElementById(id).value.trim()).length;
+  document.getElementById("progressFill").style.width=(filled/fields.length*100)+"%";
+}
+
+// Strength
+function checkStrength(){
+  const p=document.getElementById("password").value;
+  let score=0;
+  if(p.length>=8)score++;
+  if(/[A-Z]/.test(p))score++;
+  if(/[0-9]/.test(p))score++;
+  if(/[^A-Za-z0-9]/.test(p))score++;
+  const colors=['#ff3d5a','#ff6b2b','#f59e0b','#00e5b0'];
+  const labels=['Weak','Fair','Good','Strong'];
+  for(let i=1;i<=4;i++){
+    const seg=document.getElementById("s"+i);
+    seg.style.background=i<=score?colors[score-1]:'var(--border2)';
+  }
+  document.getElementById("strengthLabel").textContent=score>0?labels[score-1]:'';
+  document.getElementById("strengthLabel").style.color=score>0?colors[score-1]:'';
+}
+
+// Validate
+function showFieldErr(id,msg){
+  const inp=document.getElementById(id);
+  inp.classList.add("error");
+  const err=document.getElementById("err-"+id);
+  if(err){err.textContent=msg;err.style.display="block";}
+}
+function clearErrors(){
+  ['username','phone','email','password','confirm'].forEach(id=>{
+    const inp=document.getElementById(id);
+    if(inp)inp.classList.remove("error");
+    const err=document.getElementById("err-"+id);
+    if(err)err.style.display="none";
+  });
+}
+
+async function handleRegister(){
+  clearErrors();
+  const username=document.getElementById("username").value.trim();
+  const email=document.getElementById("email").value.trim();
+  const phone=document.getElementById("phone").value.trim();
+  const password=document.getElementById("password").value;
+  const confirmPassword=document.getElementById("confirmPassword").value;
+
+  let valid=true;
+  if(!username){showFieldErr("username","Username required");valid=false;}
+  if(!phone){showFieldErr("phone","Phone required");valid=false;}
+  if(!email||!/\S+@\S+\.\S+/.test(email)){showFieldErr("email","Valid email required");valid=false;}
+  if(!password||password.length<6){showFieldErr("password","Min 6 characters");valid=false;}
+  if(password!==confirmPassword){showFieldErr("confirm","Passwords don't match");valid=false;}
+  if(!valid)return;
+
+  const btn=document.getElementById("regBtn");
+  btn.innerHTML='<span class="dots"><span class="dot"></span><span class="dot"></span><span class="dot"></span></span>';
+  btn.classList.add("loading");
+
+  try {
+    const res=await fetch(`${BASE_URL}/auth/register`,{
+      method:"POST",
+      headers:{"Content-Type":"application/json"},
+      body:JSON.stringify({username,email,phone,password,confirmPassword})
+    });
+    if(res.ok){
+      localStorage.setItem("email",email);
+      Swal.fire({icon:'success',title:'Account Created!',html:`OTP sent to <b>${email}</b><br>Please verify to continue.`,
+        confirmButtonText:'Verify Now',customClass:{popup:'swal2-popup'}
+      }).then(()=>{ window.location.href="verify.html"; });
+    } else {
+      const err=await res.text();
+      Swal.fire({icon:'error',title:'Registration Failed',text:err||'Please try again.',customClass:{popup:'swal2-popup'}});
+    }
+  } catch(e){
+    Swal.fire({icon:'error',title:'Server Error',text:'Unable to connect. Please try again.',customClass:{popup:'swal2-popup'}});
+  }
+  btn.innerHTML='Create Account →'; btn.classList.remove("loading");
+}
+</script>
+</body>
+</html>
