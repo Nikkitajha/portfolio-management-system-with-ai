@@ -6,6 +6,7 @@ import com.internshiproject.portfolioManagement.repository.*;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
@@ -37,6 +38,7 @@ public class PortfolioService {
 
 
     // ===================== ADD STOCK (BUY) =====================
+    @Transactional
     public void addStock(String email, StockRequestDto request) {
 
         User user = userRepository.findByEmail(email)
@@ -239,6 +241,7 @@ public class PortfolioService {
 
 
     // ===================== SELL STOCK =====================
+    @Transactional
     public void sellStock(
             String email,
             Long stockId,
