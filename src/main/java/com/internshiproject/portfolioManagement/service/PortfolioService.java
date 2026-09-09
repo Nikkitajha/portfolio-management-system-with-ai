@@ -154,10 +154,19 @@ public class PortfolioService {
     }
 
     // ===================== SELL STOCK =====================
-    public void sellStock(Long stockId, int sellQty) {
+    public void sellStock(String email, Long stockId, int sellQty) {
 
-        Stock stock = stockRepository.findById(stockId)
-                .orElseThrow(() -> new RuntimeException("Stock not found"));
+    if (sellQty <= 0) {
+        throw new RuntimeException("Quantity must be greater than zero");
+    }
+
+    User user = userRepository.findByEmail(email)
+            .orElseThrow(() -> new RuntimeException("User not found"));
+
+    Stock stock = stockRepository.findByIdAndUser(stockId, user)
+            .orElseThrow(() ->
+                    new RuntimeException("Stock not found or does not belong to user")
+            );
 
         if (sellQty > stock.getQuantity()) {
             throw new RuntimeException("Not enough quantity");
