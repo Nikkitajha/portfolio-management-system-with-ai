@@ -280,9 +280,15 @@ async function handleRegister(){
     });
     if(res.ok){
       localStorage.setItem("email",email);
-      Swal.fire({icon:'success',title:'Account Created!',html:`OTP sent to <b>${email}</b><br>Please verify to continue.`,
-        confirmButtonText:'Verify Now',customClass:{popup:'swal2-popup'}
-      }).then(()=>{ window.location.href="verify.html"; });
+      Swal.fire({
+  icon:'success',
+  title:'Account Created!',
+  html:`Your account has been created successfully.<br>Please sign in to continue.`,
+  confirmButtonText:'Go to Login',
+  customClass:{popup:'swal2-popup'}
+}).then(()=>{
+  window.location.href="login.html";
+});
     } else {
       const err=await res.text();
       Swal.fire({icon:'error',title:'Registration Failed',text:err||'Please try again.',customClass:{popup:'swal2-popup'}});
