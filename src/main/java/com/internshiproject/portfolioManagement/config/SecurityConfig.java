@@ -28,18 +28,43 @@ public class SecurityConfig {
                 .formLogin(form -> form.disable())
 
                 .authorizeHttpRequests(auth -> auth
-                        .requestMatchers(
-                                "/auth/**",
-                                "/v3/api-docs/**",
-                                "/swagger-ui/**",
-                                "/swagger-ui.html",
-                                "/api/stock/**"
-                        ).permitAll()
-                        .requestMatchers(org.springframework.http.HttpMethod.OPTIONS, "/**").permitAll()
-                        .requestMatchers("/api/**").authenticated()// PROTECTED APIs
-                        .anyRequest().authenticated()
-                )
 
+            // PUBLIC APIs
+                .requestMatchers(
+                "/auth/**",
+                "/v3/api-docs/**",
+                "/swagger-ui/**",
+                "/swagger-ui.html",
+                "/api/stock/**"
+                 ).permitAll()
+
+            // CORS preflight
+             .requestMatchers(
+                org.springframework.http.HttpMethod.OPTIONS,
+                "/**"
+               ).permitAll()
+
+          // ADMIN ONLY
+              .requestMatchers("/admin/**")
+              .hasRole("ADMIN")
+
+             .requestMatchers(
+                org.springframework.http.HttpMethod.POST,
+                "/api/admin-message/send"
+              ).hasRole("ADMIN")
+
+              .requestMatchers(
+                org.springframework.http.HttpMethod.GET,
+                "/api/admin-message/all"
+               ).hasRole("ADMIN")
+
+              // LOGGED-IN USERS
+               .requestMatchers("/api/**")
+              .authenticated()
+
+             .anyRequest()
+             .authenticated()
+      )  
                 .addFilterBefore(jwtFilter,
                         org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter.class);
 
