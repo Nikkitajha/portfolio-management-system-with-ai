@@ -14,7 +14,7 @@ import org.springframework.beans.factory.annotation.Value;
 @Service
 public class JwtService {
 
-    //  Use a FIXED secret key (min 32 chars)
+    // JWT secret loaded from environment configuration
     @Value("${jwt.secret}")
    private String SECRET;
     
