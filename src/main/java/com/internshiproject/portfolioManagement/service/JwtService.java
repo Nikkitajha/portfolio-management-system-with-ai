@@ -9,12 +9,15 @@ import org.springframework.stereotype.Service;
 import java.security.Key;
 import java.util.Date;
 import java.util.function.Function;
+import org.springframework.beans.factory.annotation.Value;
 
 @Service
 public class JwtService {
 
     //  Use a FIXED secret key (min 32 chars)
-    private final String SECRET = "mysecretkeymysecretkeymysecretkey123";
+    @Value("${jwt.secret}")
+   private String SECRET;
+    
 
     // Generate signing key
     private Key getSignKey() {
