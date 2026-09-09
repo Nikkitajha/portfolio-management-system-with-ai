@@ -1,14 +1,17 @@
 package com.internshiproject.portfolioManagement.config;
 
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+
+import org.springframework.http.HttpMethod;
+
 import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
-import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
-
-import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.security.web.SecurityFilterChain;
+import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 
 @Configuration
 @EnableMethodSecurity
@@ -18,7 +21,8 @@ public class SecurityConfig {
     private JwtFilter jwtFilter;
 
     @Bean
-    public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
+    public SecurityFilterChain securityFilterChain(HttpSecurity http)
+            throws Exception {
 
         http
                 .cors(cors -> {})
@@ -29,44 +33,68 @@ public class SecurityConfig {
 
                 .authorizeHttpRequests(auth -> auth
 
-            // PUBLIC APIs
-                .requestMatchers(
-                "/auth/**",
-                "/v3/api-docs/**",
-                "/swagger-ui/**",
-                "/swagger-ui.html",
-                "/api/stock/**"
-                 ).permitAll()
+                        // ================= PUBLIC AUTH APIs =================
+                        .requestMatchers(
+                                "/auth/**",
+                                "/v3/api-docs/**",
+                                "/swagger-ui/**",
+                                "/swagger-ui.html"
+                        ).permitAll()
 
-            // CORS preflight
-             .requestMatchers(
-                org.springframework.http.HttpMethod.OPTIONS,
-                "/**"
-               ).permitAll()
+                        // ================= PUBLIC FRONTEND =================
+                        .requestMatchers(
+                                "/",
+                                "/login.html",
+                                "/register.html",
+                                "/dashboard.html",
+                                "/admin.html",
+                                "/favicon.ico",
+                                "/css/**",
+                                "/js/**",
+                                "/images/**",
+                                "/assets/**"
+                        ).permitAll()
 
-          // ADMIN ONLY
-              .requestMatchers("/admin/**")
-              .hasRole("ADMIN")
+                        // ================= PUBLIC STOCK DATA =================
+                        .requestMatchers(
+                                "/api/stock/**"
+                        ).permitAll()
 
-             .requestMatchers(
-                org.springframework.http.HttpMethod.POST,
-                "/api/admin-message/send"
-              ).hasRole("ADMIN")
+                        // ================= CORS PREFLIGHT =================
+                        .requestMatchers(
+                                HttpMethod.OPTIONS,
+                                "/**"
+                        ).permitAll()
 
-              .requestMatchers(
-                org.springframework.http.HttpMethod.GET,
-                "/api/admin-message/all"
-               ).hasRole("ADMIN")
+                        // ================= ADMIN ONLY =================
+                        .requestMatchers(
+                                "/admin/**"
+                        ).hasRole("ADMIN")
 
-              // LOGGED-IN USERS
-               .requestMatchers("/api/**")
-              .authenticated()
+                        .requestMatchers(
+                                HttpMethod.POST,
+                                "/api/admin-message/send"
+                        ).hasRole("ADMIN")
 
-             .anyRequest()
-             .authenticated()
-      )  
-                .addFilterBefore(jwtFilter,
-                        org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter.class);
+                        .requestMatchers(
+                                HttpMethod.GET,
+                                "/api/admin-message/all"
+                        ).hasRole("ADMIN")
+
+                        // ================= LOGGED-IN USERS =================
+                        .requestMatchers(
+                                "/api/**"
+                        ).authenticated()
+
+                        // Everything else remains protected
+                        .anyRequest()
+                        .authenticated()
+                )
+
+                .addFilterBefore(
+                        jwtFilter,
+                        UsernamePasswordAuthenticationFilter.class
+                );
 
         return http.build();
     }
