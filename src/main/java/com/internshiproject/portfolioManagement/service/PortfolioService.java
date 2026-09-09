@@ -305,12 +305,16 @@ public class PortfolioService {
 
         // ===================== ADD MONEY BACK TO WALLET =====================
         double totalSellAmount =
-                sellPrice * sellQty;
+        sellPrice * sellQty;
 
-        walletService.addFunds(
-                user.getId(),
-                totalSellAmount
-        );
+          double investedCost =
+        stock.getEntryPrice() * sellQty;
+
+        walletService.creditSale(
+        user.getId(),
+        totalSellAmount,
+        investedCost
+);
 
 
         // ===================== SEND EMAIL =====================
