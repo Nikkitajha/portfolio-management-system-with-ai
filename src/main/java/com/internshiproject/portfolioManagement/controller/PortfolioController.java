@@ -47,16 +47,30 @@ public class PortfolioController {
         return ResponseEntity.ok(portfolioService.getUserStocks(email));
     }
 
-    //  SELL STOCK
-    @PostMapping("/sell/{id}")
-    public ResponseEntity<?> sellStock(
-            @PathVariable Long id,
-            @RequestParam int quantity
-    ) {
-        portfolioService.sellStock(id, quantity);
+   
+     // SELL STOCK
+@PostMapping("/sell/{id}")
+public ResponseEntity<?> sellStock(
+        @RequestHeader("Authorization") String token,
+        @PathVariable Long id,
+        @RequestParam int quantity
+) {
 
-        return ResponseEntity.ok("Stock sold successfully");
-    }
+    String email =
+            jwtService.extractUsername(
+                    token.replace("Bearer ", "")
+            );
+
+    portfolioService.sellStock(
+            email,
+            id,
+            quantity
+    );
+
+    return ResponseEntity.ok(
+            "Stock sold successfully"
+    );
+}
 
     //  GET HISTORY
     @GetMapping("/history")
