@@ -39,17 +39,16 @@ public class AdminMessageController {
         return ResponseEntity.ok("Message sent successfully");
     }
 
-    //  USER FETCH
+    // USER FETCH - only own messages
     @GetMapping("/user")
-    public List<AdminMessage> getMessages(@RequestParam( value = "userId", required = false) Long userId,
-                                       @RequestHeader("Authorization") String authorization) {
-        // If userId is not provided, get it from JWT token
-        if (userId == null) {
-            User currentUser = getUserFromToken(authorization);
-            return service.getUserMessages(currentUser.getId());
-        }
-        return service.getUserMessages(userId);
-    }
+    public List<AdminMessage> getMessages(
+        @RequestHeader("Authorization") String authorization) {
+
+     User currentUser = getUserFromToken(authorization);
+
+     return service.getUserMessages(currentUser.getId());
+  }
+    
     
     //  GET ALL ADMIN MESSAGES
     @GetMapping("/all")
@@ -57,9 +56,23 @@ public class AdminMessageController {
         return service.getAllMessages();
     }
     
-    //  GET CURRENT USER INFO
-    @GetMapping("/current-user")
-    public User getCurrentUser(@RequestHeader("Authorization") String token) {
-        return getUserFromToken(token);
-    }
+  // GET CURRENT USER INFO - safe fields only
+@GetMapping("/current-user")
+public ResponseEntity<?> getCurrentUser(
+        @RequestHeader("Authorization") String token) {
+
+    User user = getUserFromToken(token);
+
+    java.util.Map<String, Object> response =
+            new java.util.HashMap<>();
+
+    response.put("id", user.getId());
+    response.put("email", user.getEmail());
+    response.put("phone", user.getPhone());
+    response.put("role", user.getRole());
+    response.put("verified", user.isVerified());
+
+    return ResponseEntity.ok(response);
 }
+}
+ 
