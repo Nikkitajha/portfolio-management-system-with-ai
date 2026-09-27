@@ -3,6 +3,7 @@ package com.internshiproject.portfolioManagement.service;
 import com.internshiproject.portfolioManagement.dto.AdminDto;
 import com.internshiproject.portfolioManagement.dto.RegisterDto;
 import com.internshiproject.portfolioManagement.entity.User;
+import com.internshiproject.portfolioManagement.entity.Role;
 import com.internshiproject.portfolioManagement.repository.UserRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -48,6 +49,7 @@ public class UserService {
         user.setPassword(passwordEncoder.encode(dto.getPassword()));
         user.setOtp(otp);
         user.setVerified(false);
+        user.setRole(Role.ROLE_USER);
 
         userRepository.save(user);
 

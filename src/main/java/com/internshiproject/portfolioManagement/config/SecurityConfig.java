@@ -8,10 +8,14 @@ import org.springframework.http.HttpMethod;
 
 import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
+import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
+import com.internshiproject.portfolioManagement.repository.UserRepository;
+import org.springframework.security.core.userdetails.UserDetailsService;
+import org.springframework.security.core.userdetails.UsernameNotFoundException;
 
 @Configuration
 @EnableMethodSecurity
@@ -19,6 +23,8 @@ public class SecurityConfig {
 
     @Autowired
     private JwtFilter jwtFilter;
+    @Autowired
+    private UserRepository userRepository;
 
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http)
@@ -30,6 +36,9 @@ public class SecurityConfig {
 
                 .httpBasic(httpBasic -> httpBasic.disable())
                 .formLogin(form -> form.disable())
+                .sessionManagement(session ->
+                        session.sessionCreationPolicy(SessionCreationPolicy.STATELESS)
+                )
 
                 .authorizeHttpRequests(auth -> auth
 
@@ -101,6 +110,13 @@ public class SecurityConfig {
 
     @Bean
     public PasswordEncoder passwordEncoder() {
+
         return new BCryptPasswordEncoder();
+    }
+    @Bean
+    public UserDetailsService userDetailsService() {
+        return email -> userRepository.findByEmail(email)
+                .orElseThrow(() ->
+                        new UsernameNotFoundException("User not found: " + email));
     }
 }
